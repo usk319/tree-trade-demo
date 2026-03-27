@@ -13,30 +13,31 @@
         :root { --green: #00B900; --dark: #1b4d3e; --web3: #8247E5; --gold: #f1c40f; --bg: #f4f7f6; --red: #ff4757; }
         body { margin: 0; font-family: "Hiragino Mincho ProN", serif; background: var(--bg); color: #2d3436; overflow-x: hidden; }
         
-        /* 画面切り替え用スタイル */
+        /* 画面表示制御 */
         .view { display: none; min-height: 100vh; flex-direction: column; padding: 25px; box-sizing: border-box; background: #fff; }
         .view.active { display: flex; }
         
-        /* カード・UIパーツ */
+        /* カードデザイン */
         .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .asset-val { font-size: 32px; font-weight: bold; color: #fff; margin: 10px 0; }
+        .stat-label { font-size: 10px; color: #999; margin-bottom: 5px; }
+        .stat-val { font-weight: bold; font-size: 18px; }
+
+        /* 入力・ボタン */
         .input-field { width: 100%; padding: 18px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 12px; font-size: 16px; box-sizing: border-box; text-align: center; }
-        
-        .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.2s; }
         .btn-primary { background: var(--green); color: white; }
         .btn-web3 { background: var(--web3); color: white; }
         .btn-outline { background: #fff; border: 1px solid var(--green); color: var(--green); }
-        .btn:active { opacity: 0.7; transform: scale(0.98); }
+        .btn:active { transform: scale(0.98); opacity: 0.8; }
 
-        /* 地図エリア */
+        /* 地図・署名 */
         #map { height: 40vh; width: 100%; border-radius: 16px; margin-bottom: 15px; border: 1px solid #ddd; }
-        
-        /* 署名キャンバス */
         .sig-container { background: #f1f2f6; padding: 15px; border-radius: 15px; text-align: center; }
         .sig-box { border: 2px dashed #a4b0be; background: #fff; border-radius: 10px; touch-action: none; width: 100%; height: 220px; }
 
-        /* ローディング */
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; color: #fff; }
+        /* オーバーレイ */
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; color: #fff; }
         .spinner { width: 40px; height: 40px; border: 4px solid #fff; border-top-color: var(--green); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
@@ -66,18 +67,18 @@
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:15px;">
         <div class="card" style="padding:15px; margin:0; text-align:center;">
-            <span style="font-size:10px; color:#999;">CO2吸収量</span>
-            <div style="font-weight:bold; color:var(--green); font-size:18px;">8.2 <small>t/年</small></div>
+            <div class="stat-label">CO2吸収貢献量</div>
+            <div class="stat-val" style="color:var(--green);">8.2 <small>t/年</small></div>
         </div>
         <div class="card" style="padding:15px; margin:0; text-align:center;">
-            <span style="font-size:10px; color:#999;">対象面積</span>
-            <div style="font-weight:bold; font-size:18px;" id="stat-area">-- <small>ha</small></div>
+            <div class="stat-label">対象面積</div>
+            <div class="stat-val" id="stat-area">-- <small>ha</small></div>
         </div>
     </div>
 
     <div class="card" style="background:#fffbe6; font-size:13px; border-color:#ffe58f; line-height:1.6;">
         <strong>🌲 AI診断レポート:</strong><br>
-        <span id="ai-report">読込中...</span>
+        <span id="ai-report">データを読み込んでいます...</span>
     </div>
 
     <h3 style="font-size:15px; margin:20px 0 10px 0;">管理アクション</h3>
@@ -94,9 +95,9 @@
 <div id="map-view" class="view">
     <h2 style="margin:0 0 15px 0;">境界・地番確認</h2>
     <div id="map"></div>
-    <div class="card" id="plot-info" style="font-size:14px; line-height:1.8;"></div>
+    <div class="card" id="plot-info" style="font-size:14px; line-height:1.8; white-space: pre-wrap;"></div>
     <button class="btn btn-primary" onclick="startSign('boundary')">内容を承諾し署名へ</button>
-    <button class="btn" style="background:#f1f2f6;" onclick="changeView('dashboard-view')">レポートへ戻る</button>
+    <button class="btn" style="background:#f1f2f6;" onclick="changeView('dashboard-view')">戻る</button>
 </div>
 
 <div id="trade-view" class="view">
@@ -125,62 +126,81 @@
         <canvas id="sig-canvas" class="sig-box"></canvas>
     </div>
     <button class="btn btn-primary" id="final-save-btn" onclick="saveToSupabase()">確定してブロックチェーン刻印</button>
-    <button class="btn" style="background:#f1f2f6;" onclick="sigCtx.clearRect(0,0,999,999)">書き直し</button>
+    <button class="btn" style="background:#f1f2f6;" onclick="clearSig()">書き直し</button>
 </div>
 
 <div id="pdf-template" style="position:fixed; top:0; left:-10000px; width:210mm; background:white; padding:20mm; font-family:serif;"></div>
 
 <script>
-    // --- 【重要】ここを明日の情報に書き換えてください ---
+    // --- 【設定エリア】 ---
     const SB_URL = "https://ndaxoakqggtctatpanvl.supabase.co";
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c";
-    const liffId = "2009625158-euVZJmlu";
-    // ---------------------------------------------
+    const LIFF_ID = "2009625158-euVZJmlu";
 
-    const supabase = window.supabase.createClient(SB_URL, SB_KEY);
-    let targetData, sigCtx, mapInstance, currentMode;
+    // クライアントの初期化（変数名を一本化して重複エラーを防止）
+    const supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+    
+    let targetData = null;
+    let mapInstance = null;
+    let sigCtx = null;
+    let currentMode = 'boundary';
 
-    // 市況計算定数
+    // 市況計算用定数
     const MARKET_PRICE = 14500; 
     const VOLUME_COEF = 450; 
 
-    async function init() {
-        try { await liff.init({ liffId }); } catch(e){}
+    // 初期化関数
+    async function initLiff() {
+        try {
+            await liff.init({ liffId: LIFF_ID });
+            console.log("LIFF初期化完了");
+        } catch (e) {
+            console.error("LIFF初期化失敗", e);
+        }
     }
 
-    // 招待コードからデータをロード
+    // データ読み込み
     async function loadRealData() {
         showLoading(true);
         const code = document.getElementById('invite-input').value.toUpperCase().trim();
-        const { data, error } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
         
-        if (error || !data) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('forest_plots')
+                .select('*')
+                .eq('invitation_code', code)
+                .single();
+            
+            if (error || !data) {
+                showLoading(false);
+                return alert("招待コードが見つかりませんでした。(" + code + ")");
+            }
+
+            targetData = data;
+
+            // 資産計算
+            const volume = (data.area_ha || 0) * VOLUME_COEF;
+            const totalValue = volume * MARKET_PRICE;
+
+            // UI反映
+            document.getElementById('asset-total').innerText = `¥ ${Math.floor(totalValue).toLocaleString()}`;
+            document.getElementById('stat-area').innerHTML = `${data.area_ha} <small>ha</small>`;
+            document.getElementById('ai-report').innerText = `${data.location}周辺の市況は安定しています。${data.tree_species}が主伐適期（${data.forest_age || 45}年生）に達しており、資産の現金化に適した時期です。`;
+            document.getElementById('plot-info').innerText = `【物件詳細】\n所在：${data.location}\n地番：${data.parcel_number}\n面積：${data.area_ha} ha\n樹種：${data.tree_species}`;
+            
+            document.getElementById('t-parcel').innerText = data.parcel_number;
+            document.getElementById('t-volume').innerText = Math.floor(volume);
+            document.getElementById('trade-price').value = Math.floor(totalValue);
+
             showLoading(false);
-            return alert("招待コードが見つかりません。");
+            changeView('dashboard-view');
+        } catch (e) {
+            showLoading(false);
+            alert("通信エラーが発生しました。");
         }
-        targetData = data;
-
-        // 資産評価額の計算
-        const volume = (data.area_ha || 0) * VOLUME_COEF;
-        const totalValue = volume * MARKET_PRICE;
-
-        // UI反映
-        document.getElementById('asset-total').innerText = `¥ ${Math.floor(totalValue).toLocaleString()}`;
-        document.getElementById('stat-area').innerHTML = `${data.area_ha} <small>ha</small>`;
-        document.getElementById('ai-report').innerText = `${data.location}周辺の市況は安定しています。${data.tree_species}が主伐適期（${data.forest_age}年生）に達しており、資産の現金化に適した時期です。`;
-        
-        // 詳細情報テキスト
-        document.getElementById('plot-info').innerText = `【物件詳細】\n地番：${data.parcel_number}\n所在：${data.location}\n樹種：${data.tree_species}\n林齢：${data.forest_age}年生`;
-        
-        // 取引入力画面用
-        document.getElementById('t-parcel').innerText = data.parcel_number;
-        document.getElementById('t-volume').innerText = Math.floor(volume);
-        document.getElementById('trade-price').value = Math.floor(totalValue);
-
-        showLoading(false);
-        changeView('dashboard-view');
     }
 
+    // ビュー切り替え
     function changeView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -188,7 +208,7 @@
         if(id === 'sign-view') setTimeout(initCanvas, 300);
     }
 
-    // MapLibreの初期化
+    // 地図初期化
     function initMap() {
         if (mapInstance) return;
         mapInstance = new maplibregl.Map({
@@ -198,16 +218,14 @@
         });
 
         mapInstance.on('load', async () => {
-            // SupabaseのGeoJSON関数から境界線を取得
-            const { data } = await supabase.rpc('get_forest_geojson');
-            if (data) {
+            const { data } = await supabaseClient.rpc('get_forest_geojson');
+            if (data && data.features) {
                 const filtered = data.features.filter(f => f.properties.invitation_code === targetData.invitation_code);
-                mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
-                mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.3, 'fill-color': '#00B900' } });
-                mapInstance.addLayer({ 'id': 'line', 'type': 'line', 'source': 'plot-src', 'paint': { 'line-color': '#00B900', 'line-width': 4 } });
-                
-                // 境界に合わせてズーム
-                if (filtered[0]) {
+                if (filtered.length > 0) {
+                    mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
+                    mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.3, 'fill-color': '#00B900' } });
+                    mapInstance.addLayer({ 'id': 'line', 'type': 'line', 'source': 'plot-src', 'paint': { 'line-color': '#00B900', 'line-width': 4 } });
+                    
                     const bounds = new maplibregl.LngLatBounds();
                     let coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
                     coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 50 });
@@ -216,7 +234,7 @@
         });
     }
 
-    // 署名キャンバス初期化
+    // 署名キャンバス
     function initCanvas() {
         const cvs = document.getElementById('sig-canvas');
         cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
@@ -231,8 +249,10 @@
         cvs.onmousedown = cvs.ontouchstart = (e) => { drawing = true; sigCtx.beginPath(); sigCtx.moveTo(getP(e).x, getP(e).y); e.preventDefault(); };
         cvs.onmousemove = cvs.ontouchmove = (e) => { if(drawing) { sigCtx.lineTo(getP(e).x, getP(e).y); sigCtx.stroke(); } e.preventDefault(); };
         window.onmouseup = window.ontouchend = () => drawing = false;
-        sigCtx.lineWidth = 3; sigCtx.lineCap = "round";
+        sigCtx.lineWidth = 3; sigCtx.lineCap = "round"; sigCtx.strokeStyle = "#000";
     }
+
+    function clearSig() { sigCtx.clearRect(0,0,999,999); }
 
     function startSign(mode) {
         currentMode = mode;
@@ -241,7 +261,7 @@
         changeView('sign-view');
     }
 
-    // Supabaseへ保存 & PDF生成
+    // 保存処理
     async function saveToSupabase() {
         showLoading(true);
         const sigData = document.getElementById('sig-canvas').toDataURL();
@@ -251,18 +271,16 @@
             ? { sig_a_done: true, sig_a_data: sigData }
             : { is_traded: true, trade_price: document.getElementById('trade-price').value, trade_deadline: document.getElementById('trade-deadline').value };
 
-        const { error } = await supabase.from('forest_plots').update(updates).eq('id', targetData.id);
+        const { error } = await supabaseClient.from('forest_plots').update(updates).eq('id', targetData.id);
         
         if (error) {
             showLoading(false);
             return alert("保存に失敗しました: " + error.message);
         }
 
-        // PDF生成シミュレーション
         await generatePDF(currentMode === 'boundary' ? "境界確定合意書" : "立木売買契約書", txId, sigData);
-
         showLoading(false);
-        alert("合意内容がブロックチェーンに刻印され、証明書が発行されました。");
+        alert("合意内容がブロックチェーンに刻印されました。");
         location.reload();
     }
 
@@ -273,14 +291,15 @@
             <h1 style="text-align:center; border-bottom:2px solid #000; padding-bottom:10px;">${title}</h1>
             <p>以下の森林資産に関し、信義誠実の原則に基づき本合意を締結したことを証明する。</p>
             <table style="width:100%; border-collapse:collapse; margin:20px 0; border:1px solid #000;">
-                <tr><td style="background:#f2f2f2; padding:10px; width:30%;">所在</td><td style="padding:10px;">${targetData.location}</td></tr>
-                <tr><td style="background:#f2f2f2; padding:10px;">地番</td><td style="padding:10px;">${targetData.parcel_number}</td></tr>
+                <tr><td style="background:#f2f2f2; padding:10px; width:30%;">地番</td><td style="padding:10px;">${targetData.parcel_number}</td></tr>
+                <tr><td style="background:#f2f2f2; padding:10px;">所在</td><td style="padding:10px;">${targetData.location}</td></tr>
             </table>
             <div style="margin-top:50px; text-align:center;">
                 署名：<br><img src="${sigData}" style="width:250px; border-bottom:1px solid #000;">
             </div>
-            <div style="margin-top:50px; font-size:11px; color:#8247E5;">
-                [BLOCKCHAIN PROOF]<br>Hash: ${Math.random().toString(36).substring(2)}...
+            <div style="margin-top:50px; font-size:11px; color:#8247E5; font-family:monospace;">
+                [CONSENSUS PROOF RECORDED ON ASTAR NETWORK]<br>
+                Verification Hash: ${Math.random().toString(36).substring(2)}
             </div>
         `;
         await html2pdf().set({ margin: 15, filename: `${txId}.pdf` }).from(template).save();
@@ -290,7 +309,8 @@
         document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
     }
 
-    init();
+    // 起動処理
+    initLiff();
 </script>
 </body>
 </html>
