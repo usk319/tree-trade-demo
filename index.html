@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8" />
-    <title>織杜 ORITO - Forest Asset Management</title>
+    <title>織杜 ORITO - 森林資産管理</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -21,31 +21,32 @@
         .btn-web3 { background: var(--web3); color: white; }
         .btn-outline { background: #fff; border: 1px solid var(--green); color: var(--green); }
         .input-field { width: 100%; padding: 18px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 12px; font-size: 16px; box-sizing: border-box; text-align: center; }
-        #map { height: 40vh; width: 100%; border-radius: 12px; margin-bottom: 15px; border: 1px solid #ddd; }
+        #map { height: 40vh; width: 100%; border-radius: 16px; margin-bottom: 15px; border: 1px solid #ddd; }
         .sig-box { border: 2px dashed #ccc; background: #fff; border-radius: 10px; touch-action: none; width: 100%; height: 200px; }
         #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; color: white; flex-direction: column; }
     </style>
 </head>
 <body>
 
-<div id="loading"><p>処理中...</p></div>
+<div id="loading"><p>ブロックチェーン照合中...</p></div>
 
 <div id="entry-view" class="view active" style="justify-content:center; align-items:center;">
     <h1 style="color:var(--green); font-size:36px; margin:0;">織杜 ORITO</h1>
-    <p style="margin-bottom:40px; color:#666;">招待コードを入力してレポートを表示</p>
-    <input type="text" id="invite-input" class="input-field" style="border:2px solid var(--green);" placeholder="CODE001">
+    <p style="margin-bottom:40px; color:#666;">招待コードを入力してください</p>
+    <input type="text" id="invite-input" class="input-field" style="border:2px solid var(--green);" placeholder="ORITO001">
     <button class="btn btn-primary" onclick="loadRealData()">資産レポートを表示</button>
 </div>
 
 <div id="dashboard-view" class="view">
-    <h2>森林資産レポート</h2>
+    <h2 style="margin:0 0 20px 0;">森林資産レポート</h2>
     <div class="card" style="background: linear-gradient(135deg, var(--dark), #2e7d32); color:#fff; border:none;">
         <div style="font-size:11px; opacity:0.8;">現在の推定資産価値</div>
         <div class="asset-val" id="asset-total">¥ --,---,---</div>
-        <div style="font-size:11px; color:var(--gold);">● 宮崎木材市況連動型評価</div>
+        <div style="font-size:11px; color:var(--gold);">● 宮崎木材市況(¥14,500/m3)連動型</div>
     </div>
     <div class="card" style="background:#fffbe6; font-size:12px; border-color:#ffe58f;">
-        <strong>AI診断:</strong> <span id="ai-report">データ読込中...</span>
+        <strong>🌲 AI診断レポート:</strong><br>
+        <span id="ai-report">読込中...</span>
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
         <div class="card" style="padding:15px; margin:0; text-align:center;">
@@ -64,7 +65,7 @@
 <div id="map-view" class="view">
     <h3>境界線・地番確認</h3>
     <div id="map"></div>
-    <div id="plot-info" class="card" style="font-size:14px;"></div>
+    <div id="plot-info" class="card" style="font-size:14px; white-space: pre-wrap;"></div>
     <button class="btn btn-primary" onclick="startSign('boundary')">内容に合意して署名</button>
     <button class="btn" style="background:#f1f2f6;" onclick="changeView('dashboard-view')">戻る</button>
 </div>
@@ -85,46 +86,48 @@
 
 <div id="sign-view" class="view">
     <h3 id="sign-title">最終署名</h3>
+    <p style="font-size:12px; color:#666; margin-bottom:10px;">枠内に署名（指またはペン）してください。</p>
     <canvas id="sig-canvas" class="sig-box"></canvas>
     <button class="btn btn-primary" onclick="saveToSupabase()">確定してブロックチェーン刻印</button>
-    <button class="btn" style="background:#f1f2f6;" onclick="sigCtx.clearRect(0,0,999,999)">書き直す</button>
+    <button class="btn" style="background:#f1f2f6;" onclick="sigCtx.clearRect(0,0,999,999)">書き直し</button>
 </div>
 
 <div id="pdf-template" style="position:fixed; top:0; left:-10000px; width:210mm; background:white; padding:20mm;"></div>
 
 <script>
-    // --- 一括設定（ここだけで宣言する） ---
-    const CONFIG = {
-        SB_URL: "https://ndaxoakqggtctatpanvl.supabase.co",
-        SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
-        LIFF_ID: "2009625158-euVZJmlu",
-        MARKET_PRICE: 14500
-    };
+    // --- 【設定エリア】 ---
+    const SB_URL = "https://ndaxoakqggtctatpanvl.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c";
+    const LIFF_ID = "2009625158-euVZJmlu";
+    // -------------------
 
-    const supabase = window.supabase.createClient(CONFIG.SB_URL, CONFIG.SB_KEY);
+    const supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
     let targetData, sigCtx, mapInstance, currentMode;
 
+    const MARKET_PRICE = 14500; 
+    const VOLUME_HA = 450; 
+
     async function init() {
-        try { await liff.init({ liffId: CONFIG.LIFF_ID }); } catch(e){}
+        try { await liff.init({ liffId: LIFF_ID }); } catch(e){}
     }
 
     async function loadRealData() {
-        const loading = document.getElementById('loading');
-        loading.style.display = 'flex';
-        const code = document.getElementById('invite-input').value.toUpperCase().trim();
+        document.getElementById('loading').style.display = 'flex';
+        const code = document.getElementById('invite-input').value.trim();
         
         try {
-            const { data, error } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
+            const { data, error } = await supabaseClient.from('forest_plots').select('*').eq('invitation_code', code).single();
             if (error || !data) throw new Error("コードが見つかりません");
             
             targetData = data;
-            const volume = (data.area_ha || 0) * 450;
-            const totalValue = volume * CONFIG.MARKET_PRICE;
+            const volume = (data.area_ha || 0) * VOLUME_HA;
+            const totalValue = volume * MARKET_PRICE;
 
             document.getElementById('asset-total').innerText = `¥ ${Math.floor(totalValue).toLocaleString()}`;
-            document.getElementById('ai-report').innerText = `${data.tree_species}が主伐期を迎えています。今期は有利な取引が期待できます。`;
             document.getElementById('stat-area').innerText = data.area_ha;
-            document.getElementById('plot-info').innerText = `地番：${data.parcel_number}\n所在：${data.location}\n面積：${data.area_ha} ha`;
+            document.getElementById('ai-report').innerText = `${data.tree_species}が主伐期を迎えています。近隣の木材市場価格に基づいた資産価値が算出されました。`;
+            document.getElementById('plot-info').innerText = `地番：${data.parcel_number}\n所在：${data.location || '宮崎県内'}\n面積：${data.area_ha} ha\n樹種：${data.tree_species}`;
+            
             document.getElementById('t-parcel').innerText = data.parcel_number;
             document.getElementById('t-volume').innerText = Math.floor(volume);
             document.getElementById('trade-price').value = Math.floor(totalValue);
@@ -133,7 +136,7 @@
         } catch (e) {
             alert(e.message);
         } finally {
-            loading.style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
         }
     }
 
@@ -151,15 +154,19 @@
             style: { "version": 8, "sources": { "gsi": { "type": "raster", "tiles": ["https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"], "tileSize": 256 } }, "layers": [{ "id": "gsi", "type": "raster", "source": "gsi" }] },
             center: [131.39, 31.99], zoom: 16, preserveDrawingBuffer: true
         });
+
         mapInstance.on('load', async () => {
-            const { data } = await supabase.rpc('get_forest_geojson');
-            if (data) {
+            const { data } = await supabaseClient.rpc('get_forest_geojson');
+            if (data && data.features) {
                 const filtered = data.features.filter(f => f.properties.invitation_code === targetData.invitation_code);
-                if (filtered[0]) {
+                if (filtered.length > 0) {
                     mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
                     mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.3, 'fill-color': '#00B900' } });
+                    mapInstance.addLayer({ 'id': 'line', 'type': 'line', 'source': 'plot-src', 'paint': { 'line-color': '#00B900', 'line-width': 4 } });
+                    
                     const bounds = new maplibregl.LngLatBounds();
-                    const coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
+                    const geo = JSON.parse(filtered[0].geometry); // GeoJSON変換用
+                    let coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
                     coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 50 });
                 }
             }
@@ -188,17 +195,23 @@
     }
 
     async function saveToSupabase() {
+        document.getElementById('loading').style.display = 'flex';
         const sigData = document.getElementById('sig-canvas').toDataURL();
+        
+        // sig_a_done か sig_b_done かは現在のステータスから判断
         const updates = currentMode === 'boundary' 
-            ? { sig_a_done: true, sig_a_data: sigData }
+            ? (targetData.sig_a_done ? { sig_b_done: true, sig_b_data: sigData } : { sig_a_done: true, sig_a_data: sigData })
             : { is_traded: true, trade_price: document.getElementById('trade-price').value, trade_deadline: document.getElementById('trade-deadline').value };
 
-        const { error } = await supabase.from('forest_plots').update(updates).eq('id', targetData.id);
-        if (error) alert(error.message);
-        else {
-            alert("ブロックチェーンに記録されました。");
+        const { error } = await supabaseClient.from('forest_plots').update(updates).eq('id', targetData.id);
+        
+        if (error) {
+            alert(error.message);
+        } else {
+            alert("合意内容がブロックチェーンに記録されました。");
             location.reload();
         }
+        document.getElementById('loading').style.display = 'none';
     }
 
     init();
