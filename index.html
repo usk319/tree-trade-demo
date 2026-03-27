@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8" />
-    <title>織杜 - 森林アセットデモ</title>
+    <title>織杜 - 森林アセットマネジメント</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
@@ -11,7 +11,7 @@
 
     <style>
         :root { --green: #00B900; --dark: #1b4d3e; --web3: #8247E5; --gold: #f1c40f; --bg: #f4f7f6; --red: #ff4757; }
-        body { margin: 0; font-family: sans-serif; background: var(--bg); color: #2d3436; overflow-x: hidden; }
+        body { margin: 0; font-family: "Hiragino Mincho ProN", serif; background: var(--bg); color: #2d3436; overflow-x: hidden; }
         .view { display: none; min-height: 100vh; flex-direction: column; box-sizing: border-box; background: #fff; }
         .view.active { display: flex; }
         .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; }
@@ -20,6 +20,7 @@
         .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
         .btn-primary { background: var(--green); color: white; }
         .btn-web3 { background: var(--web3); color: white; }
+        .nav-item { background: #fff; border-radius: 12px; padding: 15px; text-align: center; border: 1px solid #eee; }
         #map { height: 100%; width: 100%; min-height: 40vh; }
         .sig-box { border: 2px dashed #ccc; background: #fff; border-radius: 10px; touch-action: none; width: 100%; height: 200px; }
     </style>
@@ -27,59 +28,101 @@
 <body>
 
 <div id="entry-view" class="view active" style="justify-content:center; align-items:center; padding:40px;">
-    <h1 style="color:var(--green); font-size:32px;">織杜 ORITO</h1>
-    <p style="margin-bottom:40px; color:#666;">コード「ORITO01」でログイン</p>
+    <h1 style="color:var(--green); font-size:32px; margin:0;">織杜 ORITO</h1>
+    <p style="margin-bottom:40px; color:#666;">コード「ORITO01」でアクセス</p>
     <input type="text" id="invite-input" class="input-field" placeholder="ORITO01">
-    <button class="btn btn-primary" onclick="loadDashboardDemo()">デモを開始</button>
+    <button class="btn btn-primary" onclick="loadDashboard()">台帳レポートを表示</button>
 </div>
 
 <div id="dashboard-view" class="view" style="padding:25px;">
-    <h2>森林資産レポート</h2>
-    <div class="card" style="background: linear-gradient(135deg, var(--dark), #2e7d32); color:#fff;">
-        <div style="font-size:11px; opacity:0.8;">現在の推定資産価値</div>
-        <div class="asset-val">¥ 8,550,000</div>
-        <div style="font-size:11px; color:var(--gold);">● 宮崎木材市況連動</div>
+    <h2 style="margin:0 0 20px 0;">森林資産レポート</h2>
+    
+    <div class="card" style="background: linear-gradient(135deg, var(--dark), #2e7d32); color:#fff; border:none;">
+        <div style="font-size:11px; opacity:0.8;">現在の推定資産価値（立木評価）</div>
+        <div class="asset-val" id="asset-total">¥ --,---,---</div>
+        <div style="font-size:11px; color:var(--gold);">● 宮崎木材市況(¥14,500/m3)連動中</div>
     </div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div class="card"><strong>8.2 t</strong><br><span style="font-size:10px;">CO2吸収量</span></div>
-        <div class="card"><strong>1.50 ha</strong><br><span style="font-size:10px;">地籍</span></div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+        <div class="nav-item">
+            <span style="font-size:10px; color:#999;">CO2吸収量</span>
+            <div style="font-weight:bold; color:var(--green);">8.2 t/年</div>
+        </div>
+        <div class="nav-item">
+            <span style="font-size:10px; color:#999;">対象面積</span>
+            <div style="font-weight:bold;">1.50 ha</div>
+        </div>
     </div>
-    <button class="btn btn-primary" onclick="changeView('map-view')">📍 境界線確定合意</button>
-    <button class="btn btn-web3" onclick="alert('立木取引フローへ進みます')">🌲 立木売買契約</button>
+
+    <div class="card" style="background:#fffbe6; border:1px solid #ffe58f; font-size:12px;">
+        <strong>🌲 AI診断レポート:</strong><br>
+        対象地（宮崎市山林123-4）のスギは45年生を超え、主伐適期を迎えています。現在、地域一帯で素材生産が活発化しており、搬出コストを抑えた有利な取引が可能な市況です。
+    </div>
+
+    <h3 style="font-size:15px; margin:20px 0 10px 0;">管理メニュー</h3>
+    <button class="btn btn-primary" style="background:#fff; border:1px solid var(--green); color:var(--green); text-align:left;" onclick="changeView('map-view')">
+        📍 <strong>境界線確定合意</strong><br><span style="font-size:11px; font-weight:normal;">隣接所有者との筆界調査・署名</span>
+    </button>
+    <button class="btn btn-web3" style="text-align:left; margin-top:12px;" onclick="changeView('timber-view')">
+        🌲 <strong>立木売買取引</strong><br><span style="font-size:11px; font-weight:normal;">現在の市況価格で伐採業者と契約</span>
+    </button>
 </div>
 
 <div id="map-view" class="view">
-    <div id="map"></div>
-    <div style="padding:20px;">
+    <div id="map" style="flex:1;"></div>
+    <div style="padding:20px; background:#fff;">
         <h3>地番：宮崎市山林123-4</h3>
+        <p style="font-size:12px; color:#666;">境界杭(No.1〜5)の設置状況を確認しました。</p>
         <button class="btn btn-primary" onclick="changeView('agree-view')">この内容で合意・署名へ</button>
-        <button class="btn" onclick="changeView('dashboard-view')">戻る</button>
+        <button class="btn" style="background:#f1f2f6;" onclick="changeView('dashboard-view')">戻る</button>
     </div>
+</div>
+
+<div id="timber-view" class="view" style="padding:25px;">
+    <h2 style="border-left:5px solid var(--web3); padding-left:15px;">立木売買契約入力</h2>
+    <div class="card" style="background:#f8f9fa;">
+        <p><strong>現在の市場買取単価:</strong> ¥14,500 / m3</p>
+        <p><strong>あなたの山の推定ボリューム:</strong> 675 m3</p>
+    </div>
+    
+    <label style="font-size:12px; font-weight:bold;">希望売買金額 (税込)</label>
+    <input type="number" id="trade-price" class="input-field" value="9780000">
+
+    <label style="font-size:12px; font-weight:bold;">伐採・搬出期限</label>
+    <input type="date" id="trade-deadline" class="input-field" value="2026-12-31">
+
+    <button class="btn btn-web3" onclick="changeView('agree-view')">契約署名へ進む</button>
+    <button class="btn" style="background:#f1f2f6;" onclick="changeView('dashboard-view')">キャンセル</button>
 </div>
 
 <div id="agree-view" class="view" style="padding:25px;">
     <h2>最終署名</h2>
+    <p style="font-size:12px; color:#666; margin-bottom:10px;">枠内に署名（指またはペン）してください。</p>
     <canvas id="sig-canvas" class="sig-box"></canvas>
-    <button class="btn btn-primary" onclick="generatePDFDemo()">署名を確定してPDF発行</button>
-    <button class="btn" onclick="sigCtx.clearRect(0,0,999,999)">書き直し</button>
+    <button class="btn btn-primary" onclick="generatePDF()">署名を確定して刻印</button>
+    <button class="btn" style="background:#f1f2f6;" onclick="sigCtx.clearRect(0,0,999,999)">書き直し</button>
 </div>
 
 <div id="pdf-template" style="position:fixed; top:0; left:-10000px; width:210mm; background:white; padding:20mm;"></div>
 
 <script>
     let sigCtx, mapInstance;
+    const MARKET_PRICE = 14500; 
+    const AREA_HA = 1.5;
+    const VOLUME_PER_HA = 450;
 
-    // LIFF初期化
     async function init() {
         try { await liff.init({ liffId: "2009625158-euVZJmlu" }); } catch(e){}
     }
 
-    function loadDashboardDemo() {
+    function loadDashboard() {
         const val = document.getElementById('invite-input').value;
         if(val.toUpperCase() === 'ORITO01') {
+            const totalValue = AREA_HA * VOLUME_PER_HA * MARKET_PRICE;
+            document.getElementById('asset-total').innerText = `¥ ${Math.floor(totalValue).toLocaleString()}`;
             changeView('dashboard-view');
         } else {
-            alert('デモコードは ORITO01 です');
+            alert('コード「ORITO01」を入力してください');
         }
     }
 
@@ -116,13 +159,21 @@
         sigCtx.lineWidth = 3; sigCtx.lineCap = "round";
     }
 
-    async function generatePDFDemo() {
+    async function generatePDF() {
         const template = document.getElementById('pdf-template');
         const sigData = document.getElementById('sig-canvas').toDataURL();
-        template.innerHTML = `<h1>森林境界確定合意書</h1><p>物件：宮崎市山林123-4</p><img src="${sigData}" style="width:200px; border-bottom:1px solid #000;">`;
-        
-        const worker = html2pdf().from(template).save('ORITO_Document.pdf');
-        alert('PDFをダウンロードします。');
+        template.innerHTML = `
+            <h1 style="text-align:center;">織杜 ORITO 証明書</h1>
+            <p>地番：宮崎市山林123-4</p>
+            <p>上記森林資産に関する合意を以下の通り証明します。</p>
+            <div style="margin-top:50px;">
+                署名：<br>
+                <img src="${sigData}" style="width:200px; border-bottom:1px solid #000;">
+            </div>
+            <p style="margin-top:50px; font-size:10px;">Transaction ID: BN-${Date.now()}</p>
+        `;
+        html2pdf().from(template).save('ORITO_Certificate.pdf');
+        alert('ブロックチェーン（シミュレーション）への刻印とPDF発行が完了しました。');
     }
 
     init();
