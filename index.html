@@ -13,50 +13,47 @@
     <style>
         :root { --green: #00B900; --web3: #8247E5; --dark: #1b4d3e; --gold: #f1c40f; --blue: #007bff; --bg: #f8f9fa; }
         body { margin: 0; font-family: "Hiragino Mincho ProN", serif; background: var(--bg); color: #2d3436; overflow: hidden; height: 100vh; width: 100vw; }
-        .view { display: none; height: 100vh; flex-direction: column; overflow-y: auto; background: #fff; }
+        .view { display: none; height: 100vh; flex-direction: column; overflow: hidden; background: #fff; }
         .view.active { display: flex; }
 
         /* ダッシュボード用 */
         .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .asset-val { font-size: 32px; font-weight: bold; color: #fff; margin: 10px 0; }
 
-        /* 地図・詳細画面スプリット（境界確定モード） */
-        #map-area { flex: 1; position: relative; width: 100%; transition: flex 0.4s ease; }
+        /* 境界確定モード：地図スプリット */
+        #map-area { flex: 1; position: relative; width: 100%; transition: flex 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-        #detail-area { background: #fff; border-top: 5px solid var(--green); display: none; padding: 20px; overflow-y: auto; height: 60vh; border-radius: 20px 20px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,0.15); z-index: 50; }
+        #detail-area { background: #fff; border-top: 5px solid var(--green); display: none; padding: 20px; overflow-y: auto; height: 60vh; border-radius: 24px 24px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,0.15); z-index: 50; }
         body.mode-split #detail-area { display: block; }
-        body.mode-split #map-area { flex: 0.4; }
+        body.mode-split #map-area { flex: 0.35; }
 
         /* 写真連動UI */
         .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
         .photo-item { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3; border: 3px solid #eee; transition: 0.3s; cursor: pointer; }
-        .photo-item.highlight { border-color: var(--blue); transform: scale(1.1); box-shadow: 0 0 20px rgba(0,123,255,0.6); z-index: 10; }
+        .photo-item.highlight { border-color: var(--blue); transform: scale(1.05); box-shadow: 0 0 20px rgba(0,123,255,0.4); z-index: 10; }
         .photo-item img { width: 100%; height: 100%; object-fit: cover; }
         .photo-badge { position: absolute; top: 5px; left: 5px; background: var(--blue); color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 4px; }
 
-        /* UIパーツ */
-        .input-field { width: 100%; padding: 16px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 12px; font-size: 16px; box-sizing: border-box; }
+        /* UIボタン */
         .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
         .btn-primary { background: var(--green); color: white; }
         .btn-web3 { background: var(--web3); color: white; }
 
-        /* ORITO 待機演出 */
+        /* ORITO 演出アニメーション */
         #pdf-progress { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; }
-        .orito-loader { display: flex; gap: 10px; margin-bottom: 30px; }
-        .orito-loader span { font-size: 42px; font-weight: 900; color: transparent; -webkit-text-stroke: 1px var(--web3); animation: orito-glow 2s ease-in-out infinite; font-family: serif; }
-        @keyframes orito-glow { 0%, 100% { color: transparent; -webkit-text-stroke: 1px #444; transform: translateY(0); } 50% { color: var(--web3); -webkit-text-stroke: 1px var(--web3); transform: translateY(-10px); text-shadow: 0 0 20px var(--web3); } }
+        .orito-loader { display: flex; gap: 12px; margin-bottom: 30px; }
+        .orito-loader span { font-size: 48px; font-weight: 900; color: transparent; -webkit-text-stroke: 1px var(--web3); animation: orito-glow 2s ease-in-out infinite; font-family: serif; }
+        @keyframes orito-glow { 0%, 100% { color: transparent; -webkit-text-stroke: 1px #444; transform: translateY(0); } 50% { color: var(--web3); -webkit-text-stroke: 1px var(--web3); transform: translateY(-12px); text-shadow: 0 0 25px var(--web3); } }
         .orito-loader span:nth-child(2) { animation-delay: 0.2s; }
         .orito-loader span:nth-child(3) { animation-delay: 0.4s; }
         .orito-loader span:nth-child(4) { animation-delay: 0.6s; }
         .orito-loader span:nth-child(5) { animation-delay: 0.8s; }
-        
-        .line-scan { width: 200px; height: 2px; background: linear-gradient(90deg, transparent, var(--green), transparent); position: relative; overflow: hidden; }
+        .line-scan { width: 220px; height: 2px; background: linear-gradient(90deg, transparent, var(--green), transparent); position: relative; overflow: hidden; }
         .line-scan::after { content: ""; position: absolute; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, #fff, transparent); animation: scan-move 1.5s linear infinite; }
         @keyframes scan-move { to { left: 100%; } }
 
-        /* 署名キャンバス */
-        .sig-container { background: #f1f2f6; padding: 15px; border-radius: 15px; }
-        .sig-box { border: 2px dashed #a4b0be; background: #fff; border-radius: 10px; touch-action: none; width: 100%; height: 200px; }
+        /* 署名エリア */
+        .sig-box { border: 2px dashed #a4b0be; background: #fff; border-radius: 12px; touch-action: none; width: 100%; height: 200px; }
     </style>
 </head>
 <body>
@@ -64,50 +61,54 @@
 <div id="pdf-progress">
     <div class="orito-loader"><span>O</span><span>R</span><span>I</span><span>T</span><span>O</span></div>
     <div class="line-scan"></div>
-    <p id="progress-text" style="color:var(--web3); font-weight:bold; margin-top:20px; letter-spacing:4px; font-family:sans-serif;">PROCESSSING</p>
+    <p id="progress-text" style="color:var(--web3); font-weight:bold; margin-top:25px; letter-spacing:5px;">CONSENSUS CORE</p>
 </div>
 
 <div id="entry-view" class="view active" style="justify-content:center; align-items:center; padding:40px; text-align:center;">
     <h1 style="color:var(--green); font-size:36px; margin:0;">織杜 ORITO</h1>
-    <p style="color:#666; font-size:14px; margin-bottom:50px;">森林アセットマネジメント</p>
-    <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:24px; letter-spacing:4px;" placeholder="CODE001">
+    <p style="color:#666; font-size:14px; margin-bottom:50px;">森林資産マネジメント</p>
+    <input type="text" id="invite-input" style="width:100%; padding:18px; border:1px solid #ddd; border-radius:12px; font-size:24px; text-align:center; letter-spacing:4px;" placeholder="CODE001">
     <button class="btn btn-primary" onclick="loadDashboard()">台帳へアクセス</button>
 </div>
 
-<div id="dashboard-view" class="view" style="padding:25px;">
+<div id="dashboard-view" class="view" style="padding:25px; overflow-y:auto;">
     <h2 style="margin:0 0 20px 0;">森林資産レポート</h2>
     <div class="card" style="background: linear-gradient(135deg, var(--dark), #2e7d32); color:#fff; border:none;">
-        <div style="font-size:11px; opacity:0.8;">現在の推定資産価値（立木評価）</div>
+        <div style="font-size:11px; opacity:0.8;">現在の推定資産価値</div>
         <div class="asset-val" id="asset-total">¥ --,---,---</div>
         <div style="font-size:11px; color:var(--gold);">● 宮崎木材市況連動型評価</div>
     </div>
-    <div class="card" style="background:#fffbe6; font-size:12px; border-color:#ffe58f;">
-        <strong>AI診断:</strong> <span id="ai-report">読込中...</span>
+    <div class="card" style="background:#fffbe6; font-size:12px; border-color:#ffe58f; line-height:1.6;">
+        <strong>🌲 AI診断レポート:</strong><br>
+        <span id="ai-report">読込中...</span>
     </div>
-    <h3 style="font-size:15px; margin:20px 0 10px 0;">管理メニュー</h3>
+    <h3 style="font-size:15px; margin:10px 0;">管理メニュー</h3>
     <button class="btn btn-primary" style="background:#fff; border:1px solid var(--green); color:var(--green); text-align:left;" onclick="startBoundaryMode()">
-        📍 <strong>境界確定合意</strong><br><span style="font-size:11px; font-weight:normal;">現地杭の確認と電子署名</span>
+        📍 <strong>境界確定合意</strong><br><span style="font-size:11px; font-weight:normal;">レポートを閉じ、地図上で杭の確認と署名を行う</span>
     </button>
     <button class="btn btn-web3" style="text-align:left; margin-top:12px;" onclick="alert('立木取引画面へ')">
-        🌲 <strong>立木売買取引</strong><br><span style="font-size:11px; font-weight:normal;">市況価格での伐採業者契約</span>
+        🌲 <strong>立木売買取引</strong><br><span style="font-size:11px; font-weight:normal;">市況価格に基づいたスマート売却契約</span>
     </button>
 </div>
 
 <div id="map-view" class="view">
     <div id="map-area"><div id="map"></div></div>
     <div id="detail-area">
-        <h3 id="parcel-title" style="margin:0 0 15px 0;">物件：確認中</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 id="parcel-title" style="margin:0;">物件確認</h3>
+            <span style="font-size:11px; background:var(--bg); padding:4px 10px; border-radius:20px;">境界確定モード</span>
+        </div>
         <div id="photo-list" class="photo-grid"></div>
-        <textarea id="owner-msg" class="input-field" placeholder="特記事項があれば入力" style="height:80px;"></textarea>
+        <textarea id="owner-msg" style="width:100%; padding:15px; border:1px solid #ddd; border-radius:12px; font-size:14px; height:80px; box-sizing:border-box;" placeholder="境界に関するメッセージ・特記事項があれば入力"></textarea>
         <button class="btn btn-primary" onclick="changeView('agree-view')">最終合意（署名）へ</button>
-        <button class="btn" style="background:#f1f2f6;" onclick="closeDetail()">✕ 地図を大きく表示</button>
+        <button class="btn" style="background:#f1f2f6; color:#666;" onclick="closeDetail()">✕ 地図を全画面表示</button>
     </div>
 </div>
 
 <div id="agree-view" class="view" style="padding:30px;">
     <h2>境界確定署名</h2>
-    <p style="font-size:12px; color:#666; margin-bottom:20px;">図面と杭の写真を確認し、署名してください。</p>
-    <div class="sig-container">
+    <p style="font-size:12px; color:#666; margin-bottom:20px;">現地調査図面と杭の写真に相違ないことを確認し、署名してください。</p>
+    <div class="sig-container" style="background:#f1f2f6; padding:15px; border-radius:15px;">
         <canvas id="sig-canvas" class="sig-box"></canvas>
     </div>
     <button class="btn btn-primary" style="background:var(--web3);" onclick="finalizeAll()">ブロックチェーンに刻印</button>
@@ -129,31 +130,28 @@
         try { await liff.init({ liffId: CONFIG.LIFF_ID }); } catch(e){}
     }
 
-    // 1. ダッシュボード読み込み（ここで資産表示）
     async function loadDashboard() {
         toggleLoader(true, "認証中...");
         const code = document.getElementById('invite-input').value.toUpperCase().trim();
-        const { data, error } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
-        
-        await new Promise(r => setTimeout(r, 1500)); // ORITO演出
+        const { data } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
+        await new Promise(r => setTimeout(r, 1500));
         toggleLoader(false);
 
         if (!data) return alert("無効なコードです");
         targetData = data;
 
-        const volume = (data.area_ha || 0) * 450;
-        document.getElementById('asset-total').innerText = `¥ ${Math.floor(volume * CONFIG.MARKET_PRICE).toLocaleString()}`;
-        document.getElementById('ai-report').innerText = `${data.tree_species}が主伐期を迎えています。現在地周辺の市況は上昇傾向にあります。`;
+        const val = (data.area_ha || 0) * 450 * CONFIG.MARKET_PRICE;
+        document.getElementById('asset-total').innerText = `¥ ${Math.floor(val).toLocaleString()}`;
+        document.getElementById('ai-report').innerText = `${data.tree_species}が主伐適期です。近隣での素材生産と合わせた共同搬出を推奨します。`;
         
         changeView('dashboard-view');
     }
 
-    // 2. 境界確定モード開始（レポートを消して地図へ）
     function startBoundaryMode() {
         changeView('map-view');
     }
 
-    // 3. 地図と杭写真の連動システム
+    // --- 地図とポリゴン・杭の連動ロジック ---
     function initMap() {
         if (mapInstance) return;
         mapInstance = new maplibregl.Map({
@@ -166,11 +164,12 @@
             const { data } = await supabase.rpc('get_forest_geojson');
             const filtered = data.features.filter(f => f.properties.invitation_code === targetData.invitation_code);
             
-            // ポリゴン
+            // 1. ポリゴン（土地全体）の追加
             mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
             mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.3, 'fill-color': '#00B900' } });
+            mapInstance.addLayer({ 'id': 'line', 'type': 'line', 'source': 'plot-src', 'paint': { 'line-color': '#00B900', 'line-width': 4 } });
 
-            // 杭データ生成
+            // 2. 杭（ポイント）の追加
             const photos = getUrls(targetData.evidence_photo_url);
             let coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
             const pts = photos.map((u, i) => ({
@@ -180,19 +179,29 @@
             pointsGeoJSON = { "type": "FeatureCollection", "features": pts };
             
             mapInstance.addSource('pts-src', { 'type': 'geojson', 'data': pointsGeoJSON });
-            mapInstance.addLayer({ 'id': 'pts-c', 'type': 'circle', 'source': 'pts-src', 'paint': { 'circle-radius': 15, 'circle-color': '#007bff', 'circle-stroke-width': 3, 'circle-stroke-color': '#fff' } });
+            mapInstance.addLayer({ 'id': 'pts-c', 'type': 'circle', 'source': 'pts-src', 'paint': { 'circle-radius': 16, 'circle-color': '#007bff', 'circle-stroke-width': 3, 'circle-stroke-color': '#fff' } });
             mapInstance.addLayer({ 'id': 'pts-l', 'type': 'symbol', 'source': 'pts-src', 'layout': { 'text-field': ['get', 'idx'], 'text-size': 12 }, 'paint': { 'text-color': '#fff' } });
 
             const bounds = new maplibregl.LngLatBounds(); coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 60 });
 
-            // タップ挙動
+            // --- インタラクション設定 ---
+
+            // ポリゴンをタップ ➔ 詳細パネルを表示
             mapInstance.on('click', 'fill', () => showDetail());
-            mapInstance.on('click', 'pts-c', (e) => highlightInList(e.features[0].properties.idx));
+
+            // 杭をタップ ➔ 詳細パネルを開き、該当写真へスクロール
+            mapInstance.on('click', 'pts-c', (e) => {
+                const idx = e.features[0].properties.idx;
+                highlightInList(idx);
+            });
+            
+            // カーソル変更
+            mapInstance.on('mouseenter', 'fill', () => mapInstance.getCanvas().style.cursor = 'pointer');
+            mapInstance.on('mouseleave', 'fill', () => mapInstance.getCanvas().style.cursor = '');
         });
     }
 
     function showDetail() {
-        if(document.body.classList.contains('mode-split')) return;
         document.getElementById('parcel-title').innerText = "地番：" + targetData.parcel_number;
         document.getElementById('photo-list').innerHTML = getUrls(targetData.evidence_photo_url).map((u, i) => `
             <div class="photo-item" id="photo-${i+1}" onclick="focusOnMap(${i+1})">
@@ -217,13 +226,17 @@
 
     function focusOnMap(idx) {
         const feature = pointsGeoJSON.features[idx-1];
-        if (feature) mapInstance.flyTo({ center: feature.geometry.coordinates, zoom: 19 });
+        if (feature) {
+            mapInstance.flyTo({ center: feature.geometry.coordinates, zoom: 19, speed: 1.2 });
+            document.querySelectorAll('.photo-item').forEach(el => el.classList.remove('highlight'));
+            document.getElementById(`photo-${idx}`).classList.add('highlight');
+        }
     }
 
     async function finalizeAll() {
-        toggleLoader(true, "記録中...");
-        await new Promise(r => setTimeout(r, 2500)); // ORITO 刻印演出
-        alert("ブロックチェーンに刻印されました。証明書を発行します。");
+        toggleLoader(true, "ブロックチェーン刻印中...");
+        await new Promise(r => setTimeout(r, 2500));
+        alert("合意内容がASTAR NETWORKに刻印されました。");
         location.reload();
     }
 
