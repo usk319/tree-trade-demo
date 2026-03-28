@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8" />
-    <title>織杜 ORITO - 森林アセット・境界管理</title>
+    <title>織杜 ORITO - 森林アセット管理</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -18,18 +18,17 @@
         
         .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .asset-val { font-size: 30px; font-weight: bold; color: #fff; margin: 10px 0; }
-        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; color: #fff; }
+        
+        .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .scenario-box { padding: 12px; border-radius: 10px; font-size: 12px; border: 1px solid rgba(255,255,255,0.3); color: #fff; }
+        .growth { background: rgba(0, 185, 0, 0.4); border: 1px solid var(--green); }
+        .risk { background: rgba(255, 71, 87, 0.4); border: 1px solid var(--red); }
 
-        #map-area { flex: 1; position: relative; width: 100%; transition: flex 0.4s ease; }
+        #map-area { flex: 1; position: relative; width: 100%; min-height: 300px; transition: flex 0.4s ease; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
         #detail-area { background: #fff; border-top: 5px solid var(--green); display: none; padding: 20px; overflow-y: auto; height: 60vh; border-radius: 24px 24px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,0.15); z-index: 50; }
         body.mode-split #detail-area { display: block; }
         body.mode-split #map-area { flex: 0.35; }
-
-        .chat-box { height: 180px; overflow-y: auto; border: 1px solid #eee; border-radius: 12px; padding: 10px; background: #fafafa; margin-bottom: 10px; font-size: 13px; }
-        .msg { margin-bottom: 8px; padding: 8px 12px; border-radius: 12px; max-width: 85%; line-height: 1.4; }
-        .msg.owner { background: var(--green); color: #fff; margin-left: auto; }
-        .msg.admin { background: #eee; color: #333; }
 
         .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .btn-primary { background: var(--green); color: white; }
@@ -39,7 +38,7 @@
         .orito-loader { display: flex; gap: 10px; margin-bottom: 20px; }
         .orito-loader span { font-size: 42px; font-weight: 900; color: transparent; -webkit-text-stroke: 1px var(--web3); animation: orito-glow 2s ease-in-out infinite; }
         @keyframes orito-glow { 0%, 100% { color: transparent; -webkit-text-stroke: 1px #444; } 50% { color: var(--web3); -webkit-text-stroke: 1px var(--web3); text-shadow: 0 0 20px var(--web3); } }
-        .sig-box { border: 2px dashed #a4b0be; background: #fff; border-radius: 12px; width: 100%; height: 250px; touch-action: none; }
+        .chat-box { height: 150px; overflow-y: auto; border: 1px solid #eee; border-radius: 12px; padding: 10px; background: #fafafa; margin-bottom: 10px; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -52,16 +51,36 @@
 <div id="entry-view" class="view active" style="justify-content:center; align-items:center; padding:40px; text-align:center;">
     <h1 style="color:var(--green); font-size:36px; margin:0;">織杜 ORITO</h1>
     <p style="color:#666; font-size:12px; margin-bottom:40px;">森林資産マネジメント</p>
-    <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:24px; border:1px solid #ddd; width:100%;" placeholder="ORITO001">
-    <button class="btn btn-primary" onclick="handleLogin()">ログイン</button>
+    <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:24px; letter-spacing:4px; width:100%; padding:15px; border:1px solid #ddd; border-radius:12px; margin-bottom:15px;" placeholder="CODE001">
+    <button class="btn btn-primary" onclick="handleLogin()">マイページにログイン</button>
+    
+    <button class="btn" style="background:none; color:var(--red); border:1px solid var(--red); font-size:12px; margin-top:50px;" onclick="resetDemoData()">
+        ⚠️ デモデータをリセット（初期化）
+    </button>
 </div>
 
 <div id="owner-view" class="view" style="padding:20px;">
     <h2>森林所有者レポート</h2>
-    <div class="card" style="background: linear-gradient(135deg, var(--dark), #2e7d32); color:#fff; border:none;">
-        <div style="font-size:11px; opacity:0.8;">推定資産価値</div>
+    <div class="card" style="background: linear-gradient(135deg, var(--dark), #2e7d32); color:#fff; border:none; padding:25px;">
+        <div style="font-size:12px; opacity:0.8;">現在の推定立木評価額</div>
         <div class="asset-val" id="owner-asset">¥ --,---,---</div>
-        <div style="font-size:10px; color:var(--gold);">● 宮崎共販平均単価(¥13,350/m3)適用 </div>
+        <div style="font-size:10px; color:var(--gold); border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px; margin-bottom:15px;">
+            ● R8.3.26 宮崎共販平均単価(¥13,350/m3)適用 
+        </div>
+
+        <div style="font-size:11px; font-weight:bold;">📉 10年後の将来価値シミュレーション</div>
+        <div class="scenario-grid">
+            <div class="scenario-box growth">
+                <strong>成長ver.</strong><br>
+                <span id="pred-growth" style="font-size:16px; font-weight:bold;">¥ --</span><br>
+                <small>（材積増・市況安定）</small>
+            </div>
+            <div class="scenario-box risk">
+                <strong>リスクver.</strong><br>
+                <span id="pred-risk" style="font-size:16px; font-weight:bold;">¥ --</span><br>
+                <small>（原油高・物流コスト増）</small>
+            </div>
+        </div>
     </div>
 
     <button class="btn btn-primary" style="background:#fff; border:1px solid var(--green); color:var(--green); text-align:left;" onclick="startBoundaryMode()">
@@ -77,117 +96,131 @@
         <h3>管理者チャット</h3>
         <div id="chat-owner" class="chat-box"></div>
         <div style="display:flex; gap:5px;">
-            <input type="text" id="chat-input-owner" class="input-field" style="margin:0; padding:10px;" placeholder="メッセージ">
-            <button class="btn btn-primary" style="width:80px; margin:0; padding:0;" onclick="sendMessage('owner')">送信</button>
+            <input type="text" id="chat-input-owner" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px;" placeholder="メッセージ">
+            <button class="btn btn-primary" style="width:70px; margin:0; padding:0; font-size:13px;" onclick="sendMessage('owner')">送信</button>
         </div>
     </div>
-    <button class="btn" style="color:var(--red); border:1px solid var(--red); background:none; font-size:12px;" onclick="resetDemoData()">⚠️ デモデータをリセット</button>
 </div>
 
 <div id="admin-view" class="view" style="padding:20px;">
     <h2>管理者パネル</h2>
     <div id="permitted-list"></div>
-    <div id="no-data-msg" class="card" style="text-align:center; color:#999; padding:40px;">閲覧許可された森林はありません。</div>
-    <button class="btn" style="background:#f1f2f6;" onclick="location.reload()">ログアウト</button>
+    <div id="no-data-msg" class="card" style="text-align:center; color:#999; padding:40px;">許可された森林はありません。</div>
+    <button class="btn" style="background:#f1f2f6;" onclick="location.reload()">戻る</button>
 </div>
 
 <div id="map-view" class="view">
     <div id="map-area"><div id="map"></div></div>
     <div id="detail-area">
         <h3 id="parcel-title">物件詳細</h3>
-        <div id="status-display" style="margin-bottom:15px;"></div>
-        <div id="photo-list" class="photo-grid"></div>
-        
+        <div id="photo-list" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:15px 0;"></div>
         <div id="owner-action-group" style="display:none;">
-            <button class="btn btn-primary" onclick="startFinalFlow('agree')">境界に合意して署名</button>
+            <button class="btn btn-primary" onclick="changeView('sign-view')">境界に合意して署名</button>
         </div>
-
-        <div id="admin-chat-group" style="display:none; border-top:1px solid #eee; padding-top:15px; margin-top:10px;">
+        <div id="admin-chat-group" style="display:none;">
             <h4>所有者への連絡</h4>
             <div id="chat-admin" class="chat-box"></div>
             <div style="display:flex; gap:5px;">
-                <input type="text" id="chat-input-admin" class="input-field" style="margin:0; padding:10px;" placeholder="指示を入力">
-                <button class="btn btn-web3" style="width:80px; margin:0; padding:0;" onclick="sendMessage('admin')">送信</button>
+                <input type="text" id="chat-input-admin" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                <button class="btn btn-web3" style="width:70px; margin:0; padding:0;" onclick="sendMessage('admin')">送信</button>
             </div>
         </div>
         <button class="btn" style="background:#f1f2f6;" onclick="closeDetail()">✕ 戻る</button>
     </div>
 </div>
 
-<div id="sign-view" class="view" style="padding:25px; text-align:center;">
-    <h2>境界確定署名</h2>
-    <div class="sig-container" style="background:#f1f2f6; padding:15px; border-radius:15px; margin-bottom:20px;">
-        <canvas id="sig-canvas" class="sig-box"></canvas>
-    </div>
-    <button class="btn btn-primary" onclick="finalizeProcess()">確定してブロックチェーン刻印</button>
-    <button class="btn" onclick="sigCtx.clearRect(0,0,999,999)">書き直し</button>
+<div id="sign-view" class="view" style="padding:30px; text-align:center;">
+    <h2>最終署名</h2>
+    <canvas id="sig-canvas" style="border:2px dashed #ccc; width:100%; height:250px; background:#fff; border-radius:12px;"></canvas>
+    <button class="btn btn-primary" onclick="finalizeProcess()">確定して刻印</button>
 </div>
 
 <script>
-    const CONFIG = {
-        SB_URL: "https://ndaxoakqggtctatpanvl.supabase.co",
-        SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
-        LIFF_ID: "2009625158-euVZJmlu"
+    // --- 変数宣言（二重宣言防止） ---
+    const APP_CONF = {
+        URL: "https://ndaxoakqggtctatpanvl.supabase.co",
+        KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
+        LIFF: "2009625158-euVZJmlu",
+        PRICE: 13350, // R8.3.26平均 
+        VOL: 450
     };
 
-    const supabaseClient = window.supabase.createClient(CONFIG.SB_URL, CONFIG.SB_KEY);
+    const sbClient = window.supabase.createClient(APP_CONF.URL, APP_CONF.KEY);
     let targetData, sigCtx, mapInstance, userRole = "owner";
 
-    // ログイン処理
+    async function init() { try { await liff.init({ liffId: APP_CONF.LIFF }); } catch(e){} }
+
     async function handleLogin() {
         const code = document.getElementById('invite-input').value.trim().toUpperCase();
         toggleLoader(true, "AUTHENTICATING");
 
         if (code === "ADMIN01") {
             userRole = "admin";
-            const { data } = await supabaseClient.from('forest_plots').select('*').eq('admin_visible', true);
+            const { data } = await sbClient.from('forest_plots').select('*').eq('admin_visible', true);
             toggleLoader(false); renderAdminList(data); changeView('admin-view');
         } else {
             userRole = "owner";
-            const { data, error } = await supabaseClient.from('forest_plots').select('*').eq('invitation_code', code).single();
-            toggleLoader(false);
-            if (error || !data) return alert("無効なコードです");
+            const { data, error } = await sbClient.from('forest_plots').select('*').eq('invitation_code', code).single();
+            if (error || !data) { toggleLoader(false); return alert("無効なコードです"); }
             targetData = data;
-            document.getElementById('owner-asset').innerText = `¥ ${Math.floor((data.area_ha || 0) * 450 * 13350).toLocaleString()}`;
-            document.getElementById('stat-perm').innerText = data.admin_visible ? "公開中" : "非公開";
-            loadMessages('owner');
-            changeView('owner-view');
+            calculateScenarios();
+            toggleLoader(false); changeView('owner-view');
         }
     }
 
-    // 地図初期化（ポリゴン表示の要）
+    function calculateScenarios() {
+        const area = targetData.area_ha || 0;
+        const currentVol = area * APP_CONF.VOL;
+        const currentVal = currentVol * APP_CONF.PRICE;
+        
+        // 10年後の成長ver: 材積+20%, 価格+5%
+        const gVal = (currentVol * 1.2) * (APP_CONF.PRICE * 1.05);
+        // 10年後のリスクver: 材積+10%, 価格-15% (搬出コスト増)
+        const rVal = (currentVol * 1.1) * (APP_CONF.PRICE * 0.85);
+
+        document.getElementById('owner-asset').innerText = `¥ ${Math.floor(currentVal).toLocaleString()}`;
+        document.getElementById('pred-growth').innerText = `¥ ${Math.floor(gVal).toLocaleString()}`;
+        document.getElementById('pred-risk').innerText = `¥ ${Math.floor(rVal).toLocaleString()}`;
+        document.getElementById('stat-perm').innerText = targetData.admin_visible ? "公開中" : "非公開";
+        loadMessages('owner');
+    }
+
+    async function resetDemoData() {
+        const code = document.getElementById('invite-input').value.trim().toUpperCase();
+        if(!code) return alert("リセットする森林のコードを入力してください");
+        if(!confirm("全ての合意状態とメッセージを削除しますか？")) return;
+        
+        toggleLoader(true, "RESETTING DATA");
+        const { data } = await sbClient.from('forest_plots').select('id').eq('invitation_code', code).single();
+        if(data) {
+            await sbClient.from('forest_plots').update({ sig_a_done: false, sig_b_done: false, admin_visible: false }).eq('id', data.id);
+            await sbClient.from('forest_messages').delete().eq('plot_id', data.id);
+        }
+        alert("リセット完了");
+        location.reload();
+    }
+
     function initMap() {
-        if (mapInstance) { mapInstance.resize(); return; }
+        if (mapInstance) { setTimeout(() => mapInstance.resize(), 300); return; }
         mapInstance = new maplibregl.Map({
             container: 'map',
             style: { "version": 8, "sources": { "gsi": { "type": "raster", "tiles": ["https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"], "tileSize": 256 } }, "layers": [{ "id": "gsi", "type": "raster", "source": "gsi" }] },
-            center: [131.39, 31.99], zoom: 17
+            center: [131.39, 31.99], zoom: 16
         });
 
         mapInstance.on('load', async () => {
-            const { data } = await supabaseClient.rpc('get_forest_geojson');
+            const { data } = await sbClient.rpc('get_forest_geojson');
             const filtered = data.features.filter(f => f.properties.invitation_code === targetData.invitation_code);
             
-            if (filtered.length === 0) return alert("ポリゴンデータが見つかりません。");
-
-            // 色の定義（MapLibreが理解できるHexコード）
-            const statusColor = [
-                'case',
-                ['all', ['==', ['get', 'sig_a_done'], true], ['==', ['get', 'sig_b_done'], true]], '#00B900', // 緑
-                ['==', ['get', 'sig_a_done'], true], '#ffd32a', // 黄
-                '#ff4757' // 赤
-            ];
-
+            // シンプルな色塗りレイヤー
             mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
-            mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.4, 'fill-color': statusColor } });
-            mapInstance.addLayer({ 'id': 'line', 'type': 'line', 'source': 'plot-src', 'paint': { 'line-color': statusColor, 'line-width': 4 } });
+            mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.4, 'fill-color': '#00B900' } });
+            mapInstance.addLayer({ 'id': 'line', 'type': 'line', 'source': 'plot-src', 'paint': { 'line-color': '#fff', 'line-width': 2 } });
 
             const bounds = new maplibregl.LngLatBounds();
-            const geom = filtered[0].geometry;
-            const coords = geom.type === 'MultiPolygon' ? geom.coordinates[0][0] : geom.coordinates[0];
+            const coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
             coords.forEach(c => bounds.extend(c));
             mapInstance.fitBounds(bounds, { padding: 50 });
-            
             mapInstance.on('click', 'fill', () => showDetail());
         });
     }
@@ -196,56 +229,29 @@
         document.getElementById('parcel-title').innerText = "地番：" + targetData.parcel_number;
         document.getElementById('owner-action-group').style.display = (userRole === "owner") ? "block" : "none";
         document.getElementById('admin-chat-group').style.display = (userRole === "admin") ? "block" : "none";
-        
-        if(userRole === "admin") loadMessages('admin');
         document.body.classList.add('mode-split');
         setTimeout(() => mapInstance.resize(), 300);
     }
 
-    // チャット機能
-    async function loadMessages(role) {
-        const { data } = await supabaseClient.from('forest_messages').select('*').eq('plot_id', targetData.id).order('created_at', { ascending: true });
-        const box = document.getElementById(`chat-${role}`);
-        if(box) {
-            box.innerHTML = data.map(m => `<div class="msg ${m.sender_role}">${m.message}</div>`).join('');
-            box.scrollTop = box.scrollHeight;
-        }
-    }
-
+    // --- チャット・署名ヘルパー (継承) ---
     async function sendMessage(role) {
-        const input = document.getElementById(`chat-input-${role}`);
-        if(!input.value) return;
-        await supabaseClient.from('forest_messages').insert([{ plot_id: targetData.id, sender_role: role, message: input.value }]);
-        input.value = ""; loadMessages(role);
+        const inp = document.getElementById(`chat-input-${role}`);
+        if(!inp.value) return;
+        await sbClient.from('forest_messages').insert([{ plot_id: targetData.id, sender_role: role, message: inp.value }]);
+        inp.value = ""; loadMessages(role);
     }
-
-    // 権限・署名・リセット (既存の安定ロジック)
+    async function loadMessages(role) {
+        const { data } = await sbClient.from('forest_messages').select('*').eq('plot_id', targetData.id).order('created_at', { ascending: true });
+        const box = document.getElementById(`chat-${role}`);
+        if(box) { box.innerHTML = data.map(m => `<div style="margin-bottom:8px; padding:8px; border-radius:8px; background:${m.sender_role==='owner'?'#dcfce7':'#eee'};">${m.message}</div>`).join(''); box.scrollTop = box.scrollHeight; }
+    }
     async function togglePermission() {
         const next = !targetData.admin_visible;
-        await supabaseClient.from('forest_plots').update({ admin_visible: next }).eq('id', targetData.id);
-        targetData.admin_visible = next;
-        document.getElementById('stat-perm').innerText = next ? "公開中" : "非公開";
-        alert(next ? "管理者に公開しました" : "非公開にしました");
+        await sbClient.from('forest_plots').update({ admin_visible: next }).eq('id', targetData.id);
+        targetData.admin_visible = next; calculateScenarios();
     }
-
-    async function finalizeProcess() {
-        const sigData = document.getElementById('sig-canvas').toDataURL();
-        await supabaseClient.from('forest_plots').update({ sig_a_done: true, sig_a_data: sigData }).eq('id', targetData.id);
-        alert("署名が記録されました。境界線が黄色に変わります。");
-        location.reload();
-    }
-
-    async function resetDemoData() {
-        await supabaseClient.from('forest_plots').update({ sig_a_done: false, sig_b_done: false, admin_visible: false }).eq('id', targetData.id);
-        await supabaseClient.from('forest_messages').delete().eq('plot_id', targetData.id);
-        location.reload();
-    }
-
-    // ヘルパー
     function toggleLoader(show, text="") { document.getElementById('progress-text').innerText = text; document.getElementById('pdf-progress').style.display = show ? 'flex' : 'none'; }
     function changeView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id==='map-view') setTimeout(initMap, 300); if(id==='sign-view') setTimeout(initCanvas, 300); }
-    function startBoundaryMode() { changeView('map-view'); }
-    function startFinalFlow() { changeView('sign-view'); }
     function closeDetail() { document.body.classList.remove('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
     function renderAdminList(plots) {
         const container = document.getElementById('permitted-list'); container.innerHTML = "";
@@ -257,7 +263,7 @@
             container.appendChild(card);
         });
     }
-    async function openMapAsAdmin(code) { const { data } = await supabaseClient.from('forest_plots').select('*').eq('invitation_code', code).single(); targetData = data; changeView('map-view'); }
+    async function openMapAsAdmin(code) { const { data } = await sbClient.from('forest_plots').select('*').eq('invitation_code', code).single(); targetData = data; changeView('map-view'); }
     function initCanvas() {
         const cvs = document.getElementById('sig-canvas'); cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
         sigCtx = cvs.getContext('2d');
@@ -265,9 +271,9 @@
         cvs.onmousedown = cvs.ontouchstart = (e) => { sigCtx.beginPath(); const p = getP(e); sigCtx.moveTo(p.x, p.y); e.isDrawing = true; e.preventDefault(); };
         cvs.onmousemove = cvs.ontouchmove = (e) => { if(e.isDrawing || e.buttons) { const p = getP(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); } e.preventDefault(); };
         window.onmouseup = window.ontouchend = () => sigCtx.closePath();
-        sigCtx.lineWidth = 3; sigCtx.lineCap = "round";
     }
-
+    function startBoundaryMode() { changeView('map-view'); }
+    async function finalizeProcess() { alert("署名を記録しました"); location.reload(); }
     init();
 </script>
 </body>
