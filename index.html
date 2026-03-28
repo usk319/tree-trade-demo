@@ -11,29 +11,33 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
-        :root { --green: #00B900; --web3: #8247E5; --dark: #1b4d3e; --blue: #007bff; --red: #ff4757; --bg: #f4f7f6; }
+        :root { --green: #00B900; --web3: #8247E5; --dark: #1b4d3e; --blue: #007bff; --red: #ff4757; --yellow: #ffd32a; --bg: #f4f7f6; }
         body { margin: 0; font-family: "Hiragino Mincho ProN", serif; background: var(--bg); color: #2d3436; height: 100vh; overflow: hidden; position: fixed; width: 100%; }
         .view { display: none; height: 100vh; flex-direction: column; overflow-y: auto; background: #fff; -webkit-overflow-scrolling: touch; }
         .view.active { display: flex; }
         
         .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .asset-val { font-size: 28px; font-weight: bold; color: #fff; margin: 10px 0; }
-        
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; color: #fff; margin-bottom: 10px; }
+
         #map-area { flex: 1; position: relative; width: 100%; min-height: 300px; transition: flex 0.4s ease; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
         #detail-area { background: #fff; border-top: 5px solid var(--green); display: none; padding: 20px; height: 60vh; border-radius: 24px 24px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); overflow-y: auto; z-index: 100; }
         body.mode-split #detail-area { display: block; }
         body.mode-split #map-area { flex: 0.35; }
 
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        .chat-box { height: 150px; overflow-y: auto; border: 1px solid #eee; border-radius: 12px; padding: 10px; background: #fafafa; margin-bottom: 10px; font-size: 13px; }
+        .msg { margin-bottom: 8px; padding: 8px 12px; border-radius: 12px; max-width: 85%; line-height: 1.4; font-size: 12px; }
+        .msg.owner { background: var(--green); color: #fff; margin-left: auto; }
+        .msg.admin { background: #eee; color: #333; }
+
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; text-align: center; }
         .btn-primary { background: var(--green); color: white; }
         .btn-web3 { background: var(--web3); color: white; }
         .btn-red { background: var(--red); color: white; }
 
-        /* eKYCカメラプレビュー */
-        #camera-box { width: 100%; aspect-ratio: 3/2; background: #000; border-radius: 12px; margin: 15px 0; display: flex; align-items: center; justify-content: center; color: #fff; overflow: hidden; }
+        #sig-canvas { border: 2px dashed #ccc; background: #fff; border-radius: 12px; width: 100%; height: 250px; touch-action: none; cursor: crosshair; }
 
-        /* ORITO 演出 */
         #pdf-progress { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; }
         .orito-loader { display: flex; gap: 10px; margin-bottom: 20px; }
         .orito-loader span { font-size: 42px; font-weight: 900; color: transparent; -webkit-text-stroke: 1px var(--web3); animation: orito-glow 2s ease-in-out infinite; }
@@ -44,84 +48,103 @@
 
 <div id="pdf-progress">
     <div class="orito-loader"><span>O</span><span>R</span><span>I</span><span>T</span><span>O</span></div>
-    <p id="progress-text" style="color:#fff; font-weight:bold; letter-spacing:4px; text-align:center;">AUTHENTICATING</p>
+    <p id="progress-text" style="color:#fff; font-weight:bold; letter-spacing:4px; text-align:center;">GENERATING LEDGER</p>
 </div>
 
 <div id="entry-view" class="view active" style="justify-content:center; align-items:center; padding:40px; text-align:center;">
     <h1 style="color:var(--green); font-size:36px; margin:0;">織杜 ORITO</h1>
     <p style="color:#666; font-size:12px; margin-bottom:40px;">森林境界確定合意リレー</p>
     <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:24px; width:100%; padding:15px; border:1px solid #ddd; border-radius:12px;" placeholder="CODE001">
-    <button class="btn btn-primary" onclick="handleLogin()">ログイン</button>
-    <div style="font-size:10px; color:#999; margin-top:20px;">管理者コード: ADMIN01</div>
+    <button class="btn btn-primary" onclick="handleLogin()">台帳へアクセス</button>
+    <button class="btn" style="background:none; color:var(--red); border:1px solid var(--red); font-size:11px; margin-top:50px;" onclick="resetDemoData()">⚠️ デモデータをリセット</button>
 </div>
 
 <div id="dashboard-view" class="view" style="padding:20px;">
-    <h2>パネル：<span id="role-name">--</span></h2>
-    <div id="owner-only-report">
+    <h2><span id="role-label">所有者</span>パネル</h2>
+    <div id="owner-report-card">
         <div class="card" style="background: linear-gradient(135deg, var(--dark), #2e7d32); color:#fff; border:none; padding:25px;">
-            <div style="font-size:11px; opacity:0.8;">推定資産価値</div>
+            <div style="font-size:11px; opacity:0.8;">現在の推定資産価値</div>
             <div class="asset-val" id="owner-asset">¥ --,---,---</div>
             <div style="font-size:10px; color:var(--gold);">● R8.3.26 宮崎一般材平均 ¥13,350/m3</div>
         </div>
     </div>
-    <button class="btn btn-primary" onclick="startBoundaryMode()">📍 境界確定の手続きへ</button>
-    <button class="btn btn-web3" id="admin-toggle-btn" style="display:none;" onclick="togglePermission()">管理者公開を切り替える</button>
+    
+    <button class="btn btn-primary" onclick="startBoundaryMode()">📍 境界確定手続き（地図確認）</button>
+
+    <div class="card" id="perm-card" style="margin-top:20px;">
+        <p style="font-size:12px;"><strong>管理者への公開:</strong> <span id="stat-perm" style="font-weight:bold;">OFF</span></p>
+        <button class="btn btn-web3" style="padding:10px; font-size:13px;" onclick="togglePermission()">設定を切り替える</button>
+    </div>
+
+    <div class="card">
+        <h3>メッセージ</h3>
+        <div id="chat-dash" class="chat-box"></div>
+        <div style="display:flex; gap:5px;">
+            <input type="text" id="chat-input-dash" class="input-field" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px;" placeholder="連絡事項を入力">
+            <button class="btn btn-primary" style="width:70px; margin:0; padding:0; font-size:12px;" onclick="sendMessage('dash')">送信</button>
+        </div>
+    </div>
+    <button class="btn" style="background:#eee; color:#666; font-size:12px;" onclick="location.reload()">ログアウト</button>
 </div>
 
 <div id="admin-view" class="view" style="padding:20px;">
     <h2>管理者パネル</h2>
     <div id="permitted-list"></div>
     <div id="no-data-msg" class="card" style="text-align:center; color:#999; padding:40px;">許可されたデータはありません。</div>
+    <button class="btn" style="background:#eee; color:#666;" onclick="location.reload()">ログアウト</button>
 </div>
 
 <div id="map-view" class="view">
     <div id="map-area"><div id="map"></div></div>
     <div id="detail-area">
+        <div id="status-badge-area"></div>
         <h3 id="parcel-title">物件詳細</h3>
         <div id="photo-list" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;"></div>
-        <div id="action-btns" style="display:flex; gap:10px;">
-            <button class="btn btn-primary" style="flex:1;" onclick="changeView('ekyc-view')">境界に合意</button>
-            <button class="btn btn-red" style="flex:1;" onclick="denyProcess()">境界を否認</button>
+        
+        <div id="action-btn-group" style="display:none;">
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-primary" style="flex:1;" onclick="changeView('sign-view')">境界に合意</button>
+                <button class="btn btn-red" style="flex:1;" onclick="denyBoundary()">否認する</button>
+            </div>
         </div>
+
+        <div id="admin-info-group" style="display:none; border-top:1px solid #eee; padding-top:15px; margin-top:15px;">
+            <p style="font-size:12px; color:#666;">※管理者は合意操作はできません。閲覧と連絡のみ可能です。</p>
+            <div id="chat-map" class="chat-box"></div>
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="chat-input-map" class="input-field" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                <button class="btn btn-web3" style="width:70px; margin:0; padding:0; font-size:12px;" onclick="sendMessage('map')">送信</button>
+            </div>
+        </div>
+
         <button class="btn" style="background:#f1f2f6;" onclick="closeDetail()">✕ 戻る</button>
     </div>
 </div>
 
-<div id="ekyc-view" class="view" style="padding:30px; text-align:center;">
-    <h2>当事者認証 (eKYC)</h2>
-    <p style="font-size:12px; color:#666;">本人確認書類（免許証等）をカメラに収めてください。</p>
-    <div id="camera-box">
-        <img id="kyc-preview" style="width:100%; height:100%; object-fit:cover; display:none;">
-        <span id="camera-placeholder">📷 撮影待ち</span>
-    </div>
-    <input type="file" id="kyc-file" accept="image/*" capture="environment" style="display:none;" onchange="handleKycPhoto(this)">
-    <button class="btn btn-primary" onclick="document.getElementById('kyc-file').click()">証明書を撮影</button>
-    <button class="btn btn-web3" id="ekyc-next" style="display:none;" onclick="changeView('sign-view')">認証を完了して署名へ</button>
+<div id="sign-view" class="view" style="padding:30px; text-align:center;">
+    <h2>境界確定署名</h2>
+    <p style="font-size:12px; color:#666; margin-bottom:20px;">内容を確認し、枠内に署名してください。</p>
+    <canvas id="sig-canvas"></canvas>
+    <button class="btn btn-primary" onclick="finalizeProcess()">確定して刻印</button>
+    <button class="btn" style="background:#eee;" onclick="clearSignature()">書き直し</button>
+    <button class="btn" style="background:none;" onclick="changeView('map-view')">キャンセル</button>
 </div>
-
-<div id="sign-view" class="view" style="padding:25px; text-align:center;">
-    <h2>最終署名</h2>
-    <canvas id="sig-canvas" style="border:2px dashed #ccc; width:100%; height:250px; background:#fff; border-radius:12px; touch-action:none;"></canvas>
-    <button class="btn btn-primary" onclick="finalizeAll()">確定してブロックチェーン刻印</button>
-</div>
-
-<div id="pdf-template" style="position:fixed; top:0; left:-10000px; width:210mm; background:white; padding:20mm; font-family:serif;"></div>
 
 <script>
-    const CONFIG = {
+    const ORITO_CONFIG = {
         SB_URL: "https://ndaxoakqggtctatpanvl.supabase.co",
         SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
-        LIFF_ID: "2009625158-euVZJmlu",
-        UNIT_PRICE: 13350
+        LIFF_ID: "2009625158-euVZJmlu"
     };
 
-    const sb = window.supabase.createClient(CONFIG.SB_URL, CONFIG.SB_KEY);
-    let targetData, sigCtx, mapInstance, userRole = "owner", kycData = null;
+    const sb = window.supabase.createClient(ORITO_CONFIG.SB_URL, ORITO_CONFIG.SB_KEY);
+    let targetData, sigCtx, mapInstance, userRole = "owner";
 
-    async function init() { try { await liff.init({ liffId: CONFIG.LIFF_ID }); } catch(e){} }
+    async function init() { try { await liff.init({ liffId: ORITO_CONFIG.LIFF_ID }); } catch(e){} }
 
     async function handleLogin() {
         const code = document.getElementById('invite-input').value.trim().toUpperCase();
+        if(!code) return;
         toggleLoader(true, "CONNECTING");
 
         if (code === "ADMIN01") {
@@ -133,85 +156,25 @@
             if (error || !data) { toggleLoader(false); return alert("無効なコードです"); }
             targetData = data;
             userRole = (code === data.invitation_code) ? "owner" : "adjacent";
-            updateDashboard();
+            updateUI();
             toggleLoader(false); changeView('dashboard-view');
         }
     }
 
-    function updateDashboard() {
-        document.getElementById('role-name').innerText = userRole === "owner" ? "土地所有者（甲）" : "隣接所有者（乙）";
+    function updateUI() {
+        document.getElementById('role-label').innerText = userRole === "owner" ? "所有者" : "隣接者";
         if (userRole === "owner") {
-            const val = (targetData.area_ha || 0) * 450 * CONFIG.UNIT_PRICE;
+            const val = (targetData.area_ha || 0) * 450 * 13350;
             document.getElementById('owner-asset').innerText = `¥ ${Math.floor(val).toLocaleString()}`;
-            document.getElementById('admin-toggle-btn').style.display = "block";
+            document.getElementById('perm-card').style.display = "block";
         } else {
-            document.getElementById('owner-only-report').style.display = "none";
+            document.getElementById('owner-report-card').style.display = "none";
+            document.getElementById('perm-card').style.display = "none";
         }
+        loadMessages('dash');
     }
 
-    function handleKycPhoto(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                kycData = e.target.result;
-                document.getElementById('kyc-preview').src = kycData;
-                document.getElementById('kyc-preview').style.display = "block";
-                document.getElementById('camera-placeholder').style.display = "none";
-                document.getElementById('ekyc-next').style.display = "block";
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-
-    async function denyProcess() {
-        if(!confirm("境界の不一致を報告し、再調査を依頼しますか？")) return;
-        toggleLoader(true, "RECORDING DENIAL");
-        await sb.from('forest_plots').update({ is_denied: true }).eq('id', targetData.id);
-        alert("否認が記録されました。管理者に通知されます。");
-        location.reload();
-    }
-
-    async function finalizeAll() {
-        toggleLoader(true, "ISSUING CERTIFICATE");
-        const sigData = document.getElementById('sig-canvas').toDataURL();
-        const txId = "BN-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-        
-        // 1. Supabase 更新
-        const col = (userRole === "owner") ? "sig_a_done" : "sig_b_done";
-        await sb.from('forest_plots').update({ [col]: true, kyc_image_url: kycData }).eq('id', targetData.id);
-
-        // 2. PDF生成
-        const template = document.getElementById('pdf-template');
-        template.innerHTML = `
-            <h1 style="text-align:center;">山林境界確定合意証明書</h1>
-            <p>地番：${targetData.parcel_number}</p>
-            <p>認証ID: ${txId}</p>
-            <div style="margin-top:20px;">
-                <p>【本人確認書類イメージ】</p>
-                <img src="${kycData}" style="width:200px; border:1px solid #ccc;">
-            </div>
-            <div style="margin-top:20px;">
-                <p>【署名】</p>
-                <img src="${sigData}" style="width:200px; border-bottom:1px solid #000;">
-            </div>
-            <p style="font-size:10px; color:#8247E5; margin-top:30px;">RECORDED ON BLOCKCHAIN: ASTAR NETWORK</p>
-        `;
-        
-        const pdfBlob = await html2pdf().set({ margin: 15, html2canvas: { scale: 2 } }).from(template).output('blob');
-        
-        // 3. LINEチャットに送信 (LIFF内メッセージ)
-        if (liff.isInClient()) {
-            await liff.sendMessages([{
-                type: 'text',
-                text: `境界確定の合意が完了しました。\n決済番号: ${txId}\n証明書がブロックチェーンに刻印されました。`
-            }]);
-        }
-
-        alert("完了！証明書の内容をチャットに送信しました。");
-        location.reload();
-    }
-
-    // 地図、演出、ローダー等は以前の安定版を継承
+    // --- 地図とステータス表示（信号機カラー） ---
     function initMap() {
         if (mapInstance) { setTimeout(() => mapInstance.resize(), 300); return; }
         mapInstance = new maplibregl.Map({
@@ -219,18 +182,147 @@
             style: { "version": 8, "sources": { "gsi": { "type": "raster", "tiles": ["https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"], "tileSize": 256 } }, "layers": [{ "id": "gsi", "type": "raster", "source": "gsi" }] },
             center: [131.39, 31.99], zoom: 17
         });
+
         mapInstance.on('load', async () => {
             const { data } = await sb.rpc('get_forest_geojson');
             const filtered = data.features.filter(f => f.properties.invitation_code === targetData.invitation_code);
+            
+            // 色判定ロジック
+            const statusColor = [
+                'case',
+                ['==', ['get', 'is_denied'], true], '#ff4757', // 否認：赤
+                ['all', ['==', ['get', 'sig_a_done'], true], ['==', ['get', 'sig_b_done'], true]], '#00B900', // 確定：緑
+                ['any', ['==', ['get', 'sig_a_done'], true], ['==', ['get', 'sig_b_done'], true]], '#ffd32a', // 片方合意：黄
+                '#ff4757' // 未着手：赤
+            ];
+
             mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
-            mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.4, 'fill-color': '#00B900' } });
+            mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.4, 'fill-color': statusColor } });
+            mapInstance.addLayer({ 'id': 'line', 'type': 'line', 'source': 'plot-src', 'paint': { 'line-color': statusColor, 'line-width': 4 } });
+
             const bounds = new maplibregl.LngLatBounds();
             const coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
-            coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 50 });
-            mapInstance.on('click', 'fill', () => { document.body.classList.add('mode-split'); setTimeout(() => mapInstance.resize(), 300); });
+            coords.forEach(c => bounds.extend(c));
+            mapInstance.fitBounds(bounds, { padding: 50 });
+            mapInstance.on('click', 'fill', () => showDetail());
         });
     }
 
+    function showDetail() {
+        document.getElementById('parcel-title').innerText = "地番：" + targetData.parcel_number;
+        
+        // ステータス表示
+        const badge = document.getElementById('status-badge-area');
+        if (targetData.is_denied) badge.innerHTML = `<span class="status-badge" style="background:var(--red)">ステータス：不同意（要再調査）</span>`;
+        else if (targetData.sig_a_done && targetData.sig_b_done) badge.innerHTML = `<span class="status-badge" style="background:var(--green)">ステータス：境界確定済み</span>`;
+        else if (targetData.sig_a_done || targetData.sig_b_done) badge.innerHTML = `<span class="status-badge" style="background:var(--yellow); color:#333;">ステータス：片方のみ合意（待機中）</span>`;
+        else badge.innerHTML = `<span class="status-badge" style="background:#999">ステータス：未着手</span>`;
+
+        // 役割別のUI制御
+        const isUser = (userRole === "owner" || userRole === "adjacent");
+        document.getElementById('action-btn-group').style.display = isUser ? "block" : "none";
+        document.getElementById('admin-info-group').style.display = (userRole === "admin") ? "block" : "none";
+        
+        if(userRole === "admin") loadMessages('map');
+
+        document.body.classList.add('mode-split');
+        setTimeout(() => mapInstance.resize(), 300);
+    }
+
+    async function denyBoundary() {
+        if(!confirm("境界の不一致を報告しますか？")) return;
+        await sb.from('forest_plots').update({ is_denied: true }).eq('id', targetData.id);
+        alert("否認を記録しました。管理者に通知されます。");
+        location.reload();
+    }
+
+    // --- 署名とPDF/メッセージ送信 ---
+    async function finalizeProcess() {
+        toggleLoader(true, "ISSUING CERTIFICATE");
+        const sigImg = document.getElementById('sig-canvas').toDataURL();
+        const col = (userRole === "owner") ? "sig_a_done" : "sig_b_done";
+        await sb.from('forest_plots').update({ [col]: true, is_denied: false }).eq('id', targetData.id);
+
+        // PDF生成
+        const template = document.getElementById('pdf-template');
+        template.innerHTML = `<h1>境界確定合意書</h1><p>物件：${targetData.parcel_number}</p><p>合意者：${userRole}</p><img src="${sigImg}" style="width:300px; border-bottom:1px solid #000;">`;
+        await html2pdf().set({ margin: 15 }).from(template).save(`Certificate_${targetData.parcel_number}.pdf`);
+
+        // LINEメッセージ送信
+        if (liff.isInClient()) {
+            await liff.sendMessages([{ type: 'text', text: `🌲織杜 ORITO\n境界確定の署名が完了しました。\n物件：${targetData.parcel_number}\n合意区分：${userRole === "owner" ? "所有者（甲）" : "隣接者（乙）"}` }]);
+        }
+
+        alert("完了！証明書が発行され、チャットへ通知を送りました。");
+        location.reload();
+    }
+
+    // --- 署名 Canvas 制御 (タッチ対応) ---
+    function initCanvas() {
+        const cvs = document.getElementById('sig-canvas');
+        cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
+        sigCtx = cvs.getContext('2d');
+        sigCtx.lineWidth = 3; sigCtx.lineCap = "round"; sigCtx.strokeStyle = "#000";
+
+        const getPos = (e) => {
+            const rect = cvs.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        };
+
+        const startDrawing = (e) => {
+            e.preventDefault();
+            const pos = getPos(e);
+            sigCtx.beginPath();
+            sigCtx.moveTo(pos.x, pos.y);
+            cvs.isDrawing = true;
+        };
+
+        const draw = (e) => {
+            if (!cvs.isDrawing) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            sigCtx.lineTo(pos.x, pos.y);
+            sigCtx.stroke();
+        };
+
+        const stopDrawing = () => { cvs.isDrawing = false; };
+
+        cvs.addEventListener('mousedown', startDrawing);
+        cvs.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', stopDrawing);
+
+        cvs.addEventListener('touchstart', startDrawing, { passive: false });
+        cvs.addEventListener('touchmove', draw, { passive: false });
+        cvs.addEventListener('touchend', stopDrawing);
+    }
+    function clearSignature() { sigCtx.clearRect(0,0,999,999); }
+
+    // --- その他 (チャット・リセット等) ---
+    async function sendMessage(type) {
+        const inp = document.getElementById(`chat-input-${type}`);
+        if(!inp.value) return;
+        await sb.from('forest_messages').insert([{ plot_id: targetData.id, sender_role: userRole, message: inp.value }]);
+        inp.value = ""; loadMessages(type);
+    }
+    async function loadMessages(type) {
+        const { data } = await sb.from('forest_messages').select('*').eq('plot_id', targetData.id).order('created_at', { ascending: true });
+        const box = document.getElementById(`chat-${type}`);
+        if(box) { box.innerHTML = data.map(m => `<div class="msg ${m.sender_role==='admin'?'admin':'owner'}">${m.message}</div>`).join(''); box.scrollTop = box.scrollHeight; }
+    }
+    async function togglePermission() {
+        const next = !targetData.admin_visible;
+        await sb.from('forest_plots').update({ admin_visible: next }).eq('id', targetData.id);
+        targetData.admin_visible = next; document.getElementById('stat-perm').innerText = next ? "公開中" : "非公開";
+    }
+    async function resetDemoData() {
+        const code = document.getElementById('invite-input').value.trim().toUpperCase();
+        if(!code) return alert("リセットする招待コードを入力してください");
+        await sb.from('forest_plots').update({ sig_a_done: false, sig_b_done: false, is_denied: false, admin_visible: false }).eq('invitation_code', code);
+        await sb.from('forest_messages').delete().neq('id', 0); // 全メッセージ削除(デモ用)
+        location.reload();
+    }
     function toggleLoader(show, text="") { document.getElementById('progress-text').innerText = text; document.getElementById('pdf-progress').style.display = show ? 'flex' : 'none'; }
     function changeView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id==='map-view') setTimeout(initMap, 300); if(id==='sign-view') setTimeout(initCanvas, 300); }
     function startBoundaryMode() { changeView('map-view'); }
@@ -246,14 +338,6 @@
         });
     }
     async function openMapAsAdmin(code) { const { data } = await sb.from('forest_plots').select('*').eq('invitation_code', code).single(); targetData = data; changeView('map-view'); }
-    function initCanvas() {
-        const cvs = document.getElementById('sig-canvas'); cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
-        sigCtx = cvs.getContext('2d');
-        const getP = (e) => { const r = cvs.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; };
-        cvs.onmousedown = cvs.ontouchstart = (e) => { sigCtx.beginPath(); const p = getP(e); sigCtx.moveTo(p.x, p.y); e.isDrawing = true; e.preventDefault(); };
-        cvs.onmousemove = cvs.ontouchmove = (e) => { if(e.isDrawing || e.buttons) { const p = getP(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); } e.preventDefault(); };
-        window.onmouseup = window.ontouchend = () => sigCtx.closePath();
-    }
     init();
 </script>
 </body>
