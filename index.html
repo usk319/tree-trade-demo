@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8" />
-    <title>織杜 ORITO - 森林アセットマネジメント</title>
+    <title>織杜 ORITO - 森林アセットデモ</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -33,7 +33,6 @@
         .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .btn-primary { background: var(--green); color: white; }
         .btn-web3 { background: var(--web3); color: white; }
-        .btn-danger { background: var(--red); color: white; }
 
         #pdf-progress { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; }
         .orito-loader { display: flex; gap: 10px; margin-bottom: 20px; }
@@ -48,7 +47,7 @@
 
 <div id="pdf-progress">
     <div class="orito-loader"><span>O</span><span>R</span><span>I</span><span>T</span><span>O</span></div>
-    <p id="progress-text" style="color:var(--web3); font-weight:bold; letter-spacing:4px;">CALCULATING ASSET VALUE</p>
+    <p id="progress-text" style="color:var(--web3); font-weight:bold; letter-spacing:4px;">PROCESSSING</p>
 </div>
 
 <div id="entry-view" class="view active" style="justify-content:center; align-items:center; padding:40px; text-align:center;">
@@ -64,15 +63,15 @@
         <div style="font-size:12px; opacity:0.8;">現在の推定立木評価額</div>
         <div class="asset-val" id="owner-asset">¥ --,---,---</div>
         <div style="font-size:10px; color:var(--gold); border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px; margin-bottom:15px;">
-            ● R8.3.26 宮崎共販平均単価(¥13,350/m3)適用 
+            ● R8.3.26 宮崎共販平均単価(¥13,350/m3)適用
         </div>
 
-        <div style="font-size:11px; font-weight:bold;">📉 10年後の将来価値シミュレーション</div>
+        <div style="font-size:11px; font-weight:bold;">📉 10年後の将来価値予測</div>
         <div class="scenario-grid">
             <div class="scenario-box growth">
                 <strong>成長ver.</strong><br>
                 <span id="pred-growth" style="font-size:16px; font-weight:bold;">¥ --</span><br>
-                <small>（材積増・市況安定）</small>
+                <small>（生長増・市況安定）</small>
             </div>
             <div class="scenario-box risk">
                 <strong>リスクver.</strong><br>
@@ -81,10 +80,21 @@
             </div>
         </div>
     </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+        <div class="card" style="padding:15px; text-align:center; margin:0;">
+            <div style="font-size:10px; color:#999;">対象面積</div>
+            <div style="font-weight:bold;" id="stat-area">-- ha</div>
+        </div>
+        <div class="card" style="padding:15px; text-align:center; margin:0;">
+            <div style="font-size:10px; color:#999;">管理者公開</div>
+            <div style="font-weight:bold;" id="stat-perm">OFF</div>
+        </div>
+    </div>
     
     <div class="card" style="background:#fffbe6; font-size:12px; border-color:#ffe58f;">
         <strong>🌲 AI診断レポート:</strong><br>
-        令和8年3月26日の速報 [cite: 2] によれば、スギ平均単価は13,350円/$m^3$です 。中目材には落ち着きが見られますが [cite: 4]、輸出向けC材等は堅調です [cite: 4]。原油価格変動による物流コスト上昇リスクに備え、早期の境界確定を推奨します。
+        令和8年3月26日の宮崎共販速報によれば、スギ一般材平均単価は13,350円/$m^3$です。輸出C材は強保合ですが、物流コスト増のリスクを鑑み、早期の境界確定を推奨します。
     </div>
 
     <button class="btn btn-primary" style="background:#fff; border:1px solid var(--green); color:var(--green); text-align:left;" onclick="startBoundaryMode()">
@@ -95,8 +105,8 @@
     </button>
     
     <div class="card" style="margin-top:20px; border-color:#eee;">
-        <p style="font-size:13px; margin:0 0 10px 0;"><strong>管理者閲覧設定:</strong> <span id="stat-perm" style="font-weight:bold; color:var(--red);">非公開</span></p>
-        <button id="perm-btn" class="btn btn-web3" style="padding:10px; font-size:14px; margin:0;" onclick="togglePermission()">管理者への公開を切り替える</button>
+        <p style="font-size:13px; margin:0 0 10px 0;"><strong>管理者閲覧設定:</strong></p>
+        <button id="perm-btn" class="btn btn-web3" style="padding:10px; font-size:14px; margin:0;" onclick="togglePermission()">閲覧許可を切り替える</button>
     </div>
 
     <button class="btn" style="background:#fff; color:var(--red); border:1px solid var(--red); font-size:13px;" onclick="resetDemoData()">
@@ -107,7 +117,7 @@
 <div id="admin-view" class="view" style="padding:20px;">
     <h2>管理者パネル</h2>
     <div id="permitted-list"></div>
-    <div id="no-data-msg" class="card" style="text-align:center; color:#999; padding:40px;">許可された森林はありません。</div>
+    <div id="no-data-msg" class="card" style="text-align:center; color:#999; padding:40px;">表示可能な森林はありません。</div>
     <button class="btn" style="background:#f1f2f6;" onclick="location.reload()">ログアウト</button>
 </div>
 
@@ -119,7 +129,7 @@
         <textarea id="owner-msg" class="input-field" placeholder="特記事項を入力してください" style="height:80px;"></textarea>
         <div style="display:flex; gap:10px;">
             <button class="btn btn-primary" style="flex:1;" onclick="startFinalFlow('agree')">境界に合意</button>
-            <button class="btn btn-danger" style="flex:1;" onclick="startFinalFlow('disagree')">否認</button>
+            <button class="btn" style="flex:1; background:var(--red); color:#fff;" onclick="startFinalFlow('disagree')">否認</button>
         </div>
         <button class="btn" style="background:#f1f2f6;" onclick="closeDetail()">✕ 戻る</button>
     </div>
@@ -144,66 +154,62 @@
         <canvas id="sig-canvas" class="sig-box"></canvas>
     </div>
     <button class="btn btn-primary" onclick="finalizeProcess()">確定してブロックチェーン刻印</button>
-    <button class="btn" onclick="sigCtx.clearRect(0,0,999,999)">書き直し</button>
 </div>
 
 <div id="pdf-template" style="position:fixed; top:0; left:-10000px; width:210mm; background:white; padding:20mm; font-family:serif; line-height:1.8; color:#000;"></div>
 
 <script>
-    // --- グローバル変数宣言（Identifier 'supabase' has already been declared を防ぐため1回のみ定義） ---
-    const ORITO_CORE_CONFIG = {
-        URL: "https://ndaxoakqggtctatpanvl.supabase.co",
-        KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
-        LIFF: "2009625158-euVZJmlu",
-        PRICE: 13350, // R8.3.26 宮崎共販速報 
-        VOL_COEF: 450
+    // --- 変数宣言を1箇所に集約。二重宣言エラーを完全に防ぎます ---
+    const ORITO_APP_CONFIG = {
+        SB_URL: "https://ndaxoakqggtctatpanvl.supabase.co",
+        SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
+        LIFF_ID: "2009625158-euVZJmlu",
+        UNIT_PRICE: 13350, // R8.3.26 宮崎共販速報平均
+        VOL_PER_HA: 450
     };
 
-    const supabaseClient = window.supabase.createClient(ORITO_CORE_CONFIG.URL, ORITO_CORE_CONFIG.KEY);
+    const supabaseClient = window.supabase.createClient(ORITO_APP_CONFIG.SB_URL, ORITO_APP_CONFIG.SB_KEY);
     let targetData, sigCtx, mapInstance, currentMode = "";
 
-    async function init() {
-        try { await liff.init({ liffId: ORITO_CORE_CONFIG.LIFF }); } catch(e){}
-    }
+    async function init() { try { await liff.init({ liffId: ORITO_APP_CONFIG.LIFF_ID }); } catch(e){} }
 
     async function handleLogin() {
         const code = document.getElementById('invite-input').value.trim().toUpperCase();
         toggleLoader(true, "AUTHENTICATING");
-
         try {
             if (code === "ADMIN01") {
                 const { data } = await supabaseClient.from('forest_plots').select('*').eq('admin_visible', true);
                 setTimeout(() => { toggleLoader(false); renderAdminList(data); changeView('admin-view'); }, 1200);
             } else {
                 const { data, error } = await supabaseClient.from('forest_plots').select('*').eq('invitation_code', code).single();
-                if (error || !data) throw new Error("招待コードが無効です。");
+                if (error || !data) throw new Error("無効なコードです。");
                 targetData = data;
                 calculateScenarios();
                 updateDashboardUI();
                 setTimeout(() => { toggleLoader(false); changeView('owner-view'); }, 1200);
             }
-        } catch (e) {
-            toggleLoader(false);
-            alert(e.message);
-        }
+        } catch (e) { toggleLoader(false); alert(e.message); }
     }
 
     function calculateScenarios() {
         const area = targetData.area_ha || 0;
-        const vol = area * ORITO_CORE_CONFIG.VOL_COEF;
-        const val = vol * ORITO_CORE_CONFIG.PRICE;
-        // 10年後予測：成長+20%・価格+5% vs リスク（生長鈍化+10%・コスト増による手取り-15%）
+        const vol = area * ORITO_APP_CONFIG.VOL_PER_HA;
+        const val = vol * ORITO_APP_CONFIG.UNIT_PRICE;
         document.getElementById('owner-asset').innerText = `¥ ${Math.floor(val).toLocaleString()}`;
-        document.getElementById('pred-growth').innerText = `¥ ${Math.floor((vol * 1.2) * (ORITO_CORE_CONFIG.PRICE * 1.05)).toLocaleString()}`;
-        document.getElementById('pred-risk').innerText = `¥ ${Math.floor((vol * 1.1) * (ORITO_CORE_CONFIG.PRICE * 0.85)).toLocaleString()}`;
+        document.getElementById('pred-growth').innerText = `¥ ${Math.floor((vol * 1.2) * (ORITO_APP_CONFIG.UNIT_PRICE * 1.05)).toLocaleString()}`;
+        document.getElementById('pred-risk').innerText = `¥ ${Math.floor((vol * 1.1) * (ORITO_APP_CONFIG.UNIT_PRICE * 0.85)).toLocaleString()}`;
+        document.getElementById('stat-area').innerText = area + " ha";
         document.getElementById('t-volume').innerText = Math.floor(vol);
         document.getElementById('trade-price').value = Math.floor(val);
     }
 
     function updateDashboardUI() {
-        document.getElementById('stat-area').innerText = targetData.area_ha + " ha";
-        document.getElementById('stat-perm').innerText = targetData.admin_visible ? "公開中" : "非公開";
-        document.getElementById('stat-perm').style.color = targetData.admin_visible ? "var(--green)" : "var(--red)";
+        if (!targetData) return;
+        const permEl = document.getElementById('stat-perm');
+        if (permEl) {
+            permEl.innerText = targetData.admin_visible ? "公開中" : "非公開";
+            permEl.style.color = targetData.admin_visible ? "var(--green)" : "var(--red)";
+        }
     }
 
     async function togglePermission() {
@@ -216,7 +222,7 @@
     }
 
     async function resetDemoData() {
-        if(!confirm("デモ用にデータを初期化しますか？")) return;
+        if(!confirm("リセットしますか？")) return;
         toggleLoader(true, "INITIALIZING");
         await supabaseClient.from('forest_plots').update({ sig_a_done: false, admin_visible: false, is_traded: false }).eq('id', targetData.id);
         setTimeout(() => location.reload(), 1500);
@@ -227,7 +233,7 @@
         toggleLoader(true, "RECORDING ON CHAIN");
         const sigData = document.getElementById('sig-canvas').toDataURL();
         const txId = (currentMode === 'trade' ? "TMB-" : "BN-") + Date.now().toString().slice(-6);
-        const mapImg = mapInstance.getCanvas().toDataURL();
+        const mapImg = mapInstance ? mapInstance.getCanvas().toDataURL() : "";
 
         await supabaseClient.from('forest_plots').update({ sig_a_done: true, sig_a_data: sigData }).eq('id', targetData.id);
         
@@ -237,23 +243,22 @@
             <div style="text-align:right; font-size:10px;">管理番号：${txId}</div>
             <h1 style="text-align:center; text-decoration:underline; font-size:24px; margin:30px 0;">${title}</h1>
             <p>森林法及び不動産登記法に基づき調査を実施した。調査箇所における境界および資産価値に相違ないことを確認し、本合意を締結したことを証明する。</p>
-            <h3 style="border-bottom:2px solid #000; padding-bottom:5px;">1. 対象物件</h3>
-            <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
-                <tr><td style="width:25%; font-weight:bold; border:1px solid #000; padding:10px;">所在/地番</td><td style="border:1px solid #000; padding:10px;">${targetData.location || '宮崎県内'} / ${targetData.parcel_number}</td></tr>
+            <h3 style="border-bottom:2px solid #000;">1. 対象物件</h3>
+            <table style="width:100%; border-collapse:collapse;">
+                <tr><td style="border:1px solid #000; padding:10px;">所在/地番</td><td style="border:1px solid #000; padding:10px;">${targetData.location || '宮崎県内'} / ${targetData.parcel_number}</td></tr>
             </table>
-            <h3 style="border-bottom:2px solid #000; padding-bottom:5px;">2. 調査位置図</h3>
-            <div style="text-align:center; border:1px solid #eee;"><img src="${mapImg}" style="width:100%; max-height:300px; object-fit:contain;"></div>
+            <h3 style="border-bottom:2px solid #000;">2. 調査位置図</h3>
+            <div style="text-align:center;"><img src="${mapImg}" style="max-height:300px; width:100%; object-fit:contain;"></div>
             <div style="margin-top:50px; display:flex; justify-content:space-around;">
-                <div style="text-align:center; width:40%; border:1px solid #000; padding:15px;"><div style="font-size:10px;">署名：甲</div><img src="${sigData}" style="width:100%; height:80px; object-fit:contain;"></div>
-                <div style="text-align:center; width:40%; border:1px solid #000; padding:15px;"><div style="font-size:10px;">認証：乙</div><div style="height:80px; line-height:80px; color:#ddd; font-weight:bold;">WEB3 VERIFIED</div></div>
+                <div style="text-align:center; border:1px solid #000; padding:10px; width:40%;">署名：甲<br><img src="${sigData}" style="height:80px;"></div>
+                <div style="text-align:center; border:1px solid #000; padding:10px; width:40%;">認証：乙<br><div style="height:80px; line-height:80px; color:#ddd;">WEB3 VERIFIED</div></div>
             </div>
         `;
-
         await html2pdf().set({ margin: 15, filename: `${txId}.pdf`, html2canvas: { scale: 2, useCORS: true } }).from(template).save();
         setTimeout(() => { alert("刻印完了。証明書を発行しました。"); location.reload(); }, 1500);
     }
 
-    // --- その他UIロジック ---
+    // --- UI制御 & マップロジック ---
     function initMap() {
         if (mapInstance) return;
         mapInstance = new maplibregl.Map({
@@ -272,10 +277,7 @@
         });
     }
 
-    function toggleLoader(show, text = "") {
-        document.getElementById('progress-text').innerText = text;
-        document.getElementById('pdf-progress').style.display = show ? 'flex' : 'none';
-    }
+    function toggleLoader(show, text = "") { document.getElementById('progress-text').innerText = text; document.getElementById('pdf-progress').style.display = show ? 'flex' : 'none'; }
     function changeView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -292,10 +294,7 @@
             container.appendChild(card);
         });
     }
-    async function openMapAsAdmin(code) {
-        const { data } = await supabaseClient.from('forest_plots').select('*').eq('invitation_code', code).single();
-        targetData = data; changeView('map-view');
-    }
+    async function openMapAsAdmin(code) { const { data } = await supabaseClient.from('forest_plots').select('*').eq('invitation_code', code).single(); targetData = data; changeView('map-view'); }
     function startBoundaryMode() { changeView('map-view'); }
     function openTimberView() { changeView('timber-view'); }
     function startFinalFlow(mode) { currentMode = mode; document.getElementById('sign-title').innerText = "署名確定"; changeView('sign-view'); }
