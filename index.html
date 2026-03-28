@@ -12,49 +12,62 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
-        :root { --green: #00B900; --web3: #8247E5; --bg: #f8f9fa; }
+        :root { --green: #00B900; --web3: #8247E5; --red: #ff4757; --blue: #007bff; --bg: #f8f9fa; }
         body { margin: 0; font-family: "Hiragino Mincho ProN", serif; background: var(--bg); color: #2d3436; overflow: hidden; height: 100vh; width: 100vw; }
         
-        /* すべての画面を一旦非表示にする */
+        /* 画面表示制御 */
         .view { display: none; height: 100vh; flex-direction: column; overflow-y: auto; background: #fff; }
-        /* activeクラスがついた画面だけ表示する */
-        .view.active { display: flex !important; } 
+        .view.active { display: flex !important; } /* activeクラスがある画面だけ表示 */
         
-        /* ボタンと入力欄のスタイル */
-        .input-field { width: 100%; padding: 18px; border: 1px solid #ddd; border-radius: 14px; margin-bottom: 15px; font-size: 20px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 20px; border: none; border-radius: 16px; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 15px; transition: 0.3s; }
+        /* 共通UI */
+        .mode-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-bottom: 10px; color: #fff; }
+        .input-field { width: 100%; padding: 16px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 12px; font-size: 16px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.2s; }
         .btn-primary { background: var(--green); color: white; }
         .btn-web3 { background: var(--web3); color: white; }
-        .mode-tag { display: inline-block; padding: 6px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; color: #fff; margin-bottom: 20px; }
 
-        /* ローディング画面 */
-        #pdf-progress { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; color: #fff; }
-        .loader { width: 40px; height: 40px; border: 4px solid var(--web3); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* 地図のレイアウト */
-        #map-area { flex: 1; position: relative; width: 100%; }
+        /* 地図スプリット表示 */
+        #map-area { flex: 1; position: relative; width: 100%; min-height: 40vh; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-        #detail-area { background: #fff; border-top: 4px solid var(--green); display: none; padding: 20px; height: 60vh; border-radius: 20px 20px 0 0; }
+        #detail-area { background: #fff; border-top: 5px solid var(--green); display: none; padding: 20px; overflow-y: auto; height: 60vh; border-radius: 20px 20px 0 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); }
         body.mode-split #detail-area { display: block; }
         body.mode-split #map-area { flex: 0.4; }
-        .sig-box { border: 2px dashed #ccc; width: 100%; height: 200px; background: #fff; touch-action: none; }
+
+        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
+        .photo-item { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3; border: 2px solid #eee; }
+        .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* 署名 */
+        .sig-container { background: #f1f2f6; padding: 15px; border-radius: 15px; margin-bottom: 10px; }
+        .sig-box { border: 2px dashed #a4b0be; background: #fff; border-radius: 10px; touch-action: none; width: 100%; height: 180px; }
+
+        /* プログレス画面 */
+        #pdf-progress { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; color: #fff; text-align: center; }
+        .loader { width: 50px; height: 50px; border: 5px solid var(--web3); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #status-text { font-size: 14px; color: #aaa; margin-top: 15px; font-family: monospace; }
     </style>
 </head>
 <body>
 
 <div id="pdf-progress">
     <div class="loader"></div>
-    <p id="status-text" style="margin-top:15px; font-family:monospace;">PROCESSING...</p>
+    <div style="font-weight:bold; letter-spacing:3px; color:var(--web3); font-size:20px;">ORITO CORE</div>
+    <div id="status-text">INITIALIZING...</div>
 </div>
 
 <div id="home-view" class="view active">
     <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; text-align:center;">
-        <h1 style="color:var(--green); font-size:36px; margin:0;">織杜 ORITO</h1>
-        <p style="color:#666; margin-bottom:50px;">森林境界・立木取引統合システム</p>
+        <h1 style="color:var(--green); font-size:32px; margin:0;">織杜 ORITO</h1>
+        <p style="color:#666; font-size:14px; margin-bottom:60px;">森林境界・立木取引 DXプラットフォーム</p>
         
-        <button class="btn btn-primary" onclick="selectMode('boundary')">📍 境界確定合意</button>
-        <button class="btn btn-web3" onclick="selectMode('timber')">🌲 立木売買取引</button>
+        <button class="btn btn-primary" style="height:100px;" onclick="selectMode('boundary')">
+            📍 境界確定合意<br><span style="font-size:11px; font-weight:normal;">地権者・隣接者との筆界確認</span>
+        </button>
+        
+        <button class="btn btn-web3" style="height:100px;" onclick="selectMode('timber')">
+            🌲 立木売買契約<br><span style="font-size:11px; font-weight:normal;">立木の売却・契約記録</span>
+        </button>
     </div>
 </div>
 
@@ -62,65 +75,68 @@
     <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px;">
         <div id="entry-tag" class="mode-tag"></div>
         <h2 style="margin-bottom:30px;">招待コードを入力</h2>
-        <input type="text" id="invite-input" class="input-field" style="text-align:center; letter-spacing:8px;" placeholder="ORITO001">
-        <button class="btn btn-primary" id="entry-next-btn" onclick="verifyCode()">次へ進む</button>
-        <button class="btn" style="background:#eee; color:#666;" onclick="location.reload()">最初に戻る</button>
+        <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:26px; letter-spacing:6px;" placeholder="ORITO001">
+        <button class="btn btn-primary" id="entry-next-btn" onclick="verifyCode()">調査台帳を照会</button>
+        <button class="btn" style="background:#f1f2f6; margin-top:20px;" onclick="location.reload()">戻る</button>
     </div>
 </div>
 
 <div id="kyc-view" class="view" style="padding:30px;">
-    <h2>本人確認</h2>
-    <p id="role-label" style="padding:10px; background:#f0ebff; border-radius:8px; font-weight:bold;"></p>
+    <h2>当事者確認</h2>
+    <p id="role-label" style="font-weight:bold; color:var(--web3); padding:10px; background:#f0ebff; border-radius:8px;"></p>
     <input type="text" id="current-address" class="input-field" placeholder="現住所を入力してください">
-    <button class="btn btn-primary" onclick="changeView('map-view')">地図を確認する</button>
+    <button class="btn btn-primary" onclick="changeView('map-view')">境界調査図を表示</button>
 </div>
 
 <div id="map-view" class="view">
     <div id="map-area"><div id="map"></div></div>
     <div id="detail-area">
-        <h3 id="parcel-title">地番情報</h3>
-        <p id="parcel-info"></p>
-        <div id="photo-list" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
-        <button class="btn btn-primary" onclick="changeView('agree-view')">署名へ進む</button>
-        <button class="btn" onclick="document.body.classList.remove('mode-split')">地図に戻る</button>
+        <h3 id="parcel-title" style="margin:0;">物件情報</h3>
+        <p id="parcel-info" style="font-size:14px; color:#666; margin-bottom:15px;"></p>
+        <div id="photo-list" class="photo-grid"></div>
+        <button class="btn btn-primary" onclick="changeView('agree-view')">署名ステップへ</button>
+        <button class="btn" style="background:#f8f9fa;" onclick="closeDetail()">✕ 地図に戻る</button>
     </div>
 </div>
 
 <div id="timber-view" class="view" style="padding:30px;">
-    <h2 style="color:var(--web3)">売買条件確認</h2>
+    <div class="mode-tag" style="background:var(--web3);">立木取引モード</div>
+    <h2>契約条件の確認</h2>
     <div style="background:#f8f9fa; padding:15px; border-radius:12px; margin-bottom:20px;">
-        <p>物件：<span id="t-parcel"></span></p>
-        <p>面積：<span id="t-area"></span> ha</p>
+        <p><strong>対象地番：</strong><span id="t-parcel"></span></p>
+        <p><strong>面積：</strong><span id="t-area"></span> ha</p>
     </div>
-    <label>売買代金 (税込)</label>
+    <label style="font-size:12px; font-weight:bold; color:#666;">売買代金（税込）</label>
     <input type="number" id="trade-price" class="input-field" placeholder="金額を入力">
-    <label>搬出期限</label>
+    <label style="font-size:12px; font-weight:bold; color:#666;">搬出期限</label>
     <input type="date" id="logging-deadline" class="input-field">
-    <button class="btn btn-web3" onclick="changeView('agree-view')">契約署名へ</button>
+    <button class="btn btn-web3" onclick="changeView('agree-view')">契約署名へ進む</button>
 </div>
 
 <div id="agree-view" class="view" style="padding:30px;">
     <h2>最終署名</h2>
-    <canvas id="sig-canvas" class="sig-box"></canvas>
-    <button class="btn btn-primary" id="final-btn" onclick="finalizeProcess()">完了して保存</button>
-    <button class="btn" style="background:#eee;" onclick="clearSig()">消去</button>
+    <div class="sig-container">
+        <canvas id="sig-canvas" class="sig-box"></canvas>
+    </div>
+    <button class="btn btn-primary" id="final-btn" onclick="finalizeProcess()">ブロックチェーンに記録</button>
+    <button class="btn" style="background:#f1f2f6;" onclick="clearSig()">書き直し</button>
 </div>
 
-<div id="pdf-overlay" style="position:fixed; top:0; left:-10000px; width:210mm;"><div id="pdf-template"></div></div>
+<div id="pdf-overlay" style="position:fixed; top:0; left:-20000px; width:210mm;"><div id="pdf-template"></div></div>
 
 <script>
-    // --- 初期設定 (一箇所に集約) ---
-    const S_URL = 'https://uggpclqqyaailuadgzxv.supabase.co';
-    const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnZ3BjbHFxeWFhaWx1YWRnenh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MzE0NTgsImV4cCI6MjA5MDEwNzQ1OH0.jY5jJuJUgwbIZm8y-jJvEH27eAP9m9semR3MbLxVxGo';
-    const supabase = window.supabase.createClient(S_URL, S_KEY);
+    // --- 1. Supabaseの初期化 (二重宣言を絶対にしないこと) ---
+    const SUPABASE_URL = 'https://uggpclqqyaailuadgzxv.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnZ3BjbHFxeWFhaWx1YWRnenh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MzE0NTgsImV4cCI6MjA5MDEwNzQ1OH0.jY5jJuJUgwbIZm8y-jJvEH27eAP9m9semR3MbLxVxGo';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let targetData = null;
+    let mapInstance = null;
+    let sigCtx = null;
     let currentMode = 'boundary';
     let isOwner = true;
-    let sigCtx = null;
-    let mapInstance = null;
 
-    // 画面切り替え関数
+    // --- 2. 画面切り替え関数 ---
     function changeView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         const next = document.getElementById(id);
@@ -131,7 +147,7 @@
         }
     }
 
-    // モード選択
+    // モード選択（ホームからコード入力へ）
     function selectMode(mode) {
         currentMode = mode;
         const tag = document.getElementById('entry-tag');
@@ -139,14 +155,13 @@
         tag.innerText = mode === 'boundary' ? '境界確定モード' : '立木取引モード';
         tag.style.background = mode === 'boundary' ? 'var(--green)' : 'var(--web3)';
         btn.style.background = mode === 'boundary' ? 'var(--green)' : 'var(--web3)';
-        // ここで招待コード画面に切り替える
         changeView('entry-view');
     }
 
-    // コード照会
+    // --- 3. データ処理ロジック ---
     async function verifyCode() {
         const code = document.getElementById('invite-input').value.toUpperCase().trim();
-        if(!code) return alert("招待コードを入力してください");
+        if(!code) return alert("コードを入力してください");
 
         const { data, error } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
         if (!data) return alert("無効なコードです。");
@@ -155,6 +170,7 @@
         if (currentMode === 'timber') {
             document.getElementById('t-parcel').innerText = data.parcel_number;
             document.getElementById('t-area').innerText = data.area_ha;
+            document.getElementById('final-btn').style.background = 'var(--web3)';
             changeView('timber-view');
         } else {
             isOwner = !data.sig_a_done;
@@ -164,7 +180,7 @@
         }
     }
 
-    // 地図初期化 (MapLibre)
+    // 地図
     function initMap() {
         if (mapInstance) return;
         mapInstance = new maplibregl.Map({
@@ -185,18 +201,21 @@
             }
             mapInstance.on('click', 'fill', () => {
                 document.getElementById('parcel-title').innerText = targetData.parcel_number;
+                document.getElementById('parcel-info').innerText = `${targetData.area_ha}ha / ${targetData.tree_species}`;
+                const urls = getUrls(targetData.evidence_photo_url);
+                document.getElementById('photo-list').innerHTML = urls.map(u => `<div class="photo-item"><img src="${u}"></div>`).join('');
                 document.body.classList.add('mode-split');
                 setTimeout(() => mapInstance.resize(), 300);
             });
         });
     }
 
-    // 署名初期化
+    function closeDetail() { document.body.classList.remove('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
+
+    // 署名
     function initCanvas() {
-        const cvs = document.getElementById('sig-canvas');
-        cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
-        sigCtx = cvs.getContext('2d');
-        let drawing = false;
+        const cvs = document.getElementById('sig-canvas'); cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
+        sigCtx = cvs.getContext('2d'); let drawing = false;
         const getP = (e) => { const r = cvs.getBoundingClientRect(); const cx = e.touches ? e.touches[0].clientX : e.clientX; const cy = e.touches ? e.touches[0].clientY : e.clientY; return { x: cx - r.left, y: cy - r.top }; };
         cvs.addEventListener('touchstart', (e) => { drawing = true; sigCtx.beginPath(); sigCtx.moveTo(getP(e).x, getP(e).y); e.preventDefault(); });
         cvs.addEventListener('touchmove', (e) => { if(!drawing) return; sigCtx.lineTo(getP(e).x, getP(e).y); sigCtx.stroke(); e.preventDefault(); });
@@ -205,26 +224,34 @@
     }
     function clearSig() { sigCtx.clearRect(0,0,1000,1000); }
 
-    // 保存処理
+    // 保存・PDF生成
     async function finalizeProcess() {
         document.getElementById('pdf-progress').style.display = 'flex';
         const sigData = document.getElementById('sig-canvas').toDataURL("image/png");
         try {
             const updates = currentMode === 'boundary' 
                 ? (isOwner ? { sig_a_done: true, sig_a_data: sigData, owner_address: document.getElementById('current-address').value } 
-                           : { sig_b_done: true, sig_b_data: sigData, adjacent_address: document.getElementById('current-address').value })
-                : { sig_a_done: true, sig_a_data: sigData }; // 取引モード用暫定
+                           : { sig_b_done: true, sig_b_data: sigData, adjacent_address: document.getElementById('current-address').value, is_agreed: true })
+                : { sig_a_done: true, sig_a_data: sigData };
 
             await supabase.from('forest_plots').update(updates).eq('id', targetData.id);
-            alert("ブロックチェーンに合意を記録しました。");
+            alert("合意内容を保存し、記録を完了しました。");
             location.reload();
         } catch (e) {
-            alert("エラーが発生しました。");
+            alert("保存に失敗しました。");
             document.getElementById('pdf-progress').style.display = 'none';
         }
     }
 
-    // LIFF初期化
+    function getUrls(d) {
+        if (!d) return [];
+        try { return JSON.parse(d); } catch(e) {
+            const m = String(d).match(/https?:\/\/[^\s,"{}]+/g);
+            return m ? m.map(u => u.replace(/[\]\}\s,]+$/, '')) : [];
+        }
+    }
+
+    // LIFF
     liff.init({ liffId: "2009576392-CvuNETRQ" }).catch(e => console.log(e));
 </script>
 </body>
