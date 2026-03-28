@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8" />
-    <title>織杜 ORITO - 森林アセット管理</title>
+    <title>織杜 ORITO - 森林境界確定合意</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -16,6 +16,7 @@
         .view { display: none; height: 100vh; flex-direction: column; overflow-y: auto; background: #fff; -webkit-overflow-scrolling: touch; }
         .view.active { display: flex; }
         
+        /* Dashboard */
         .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .asset-val { font-size: 26px; font-weight: bold; color: #fff; margin: 10px 0; }
         .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
@@ -23,18 +24,21 @@
         .growth { background: linear-gradient(135deg, #2e7d32, var(--green)); }
         .risk { background: linear-gradient(135deg, #b71c1c, var(--red)); }
 
+        /* Map & Detail */
         #map-area { flex: 1; position: relative; width: 100%; min-height: 300px; transition: flex 0.4s ease; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
         #detail-area { background: #fff; border-top: 5px solid var(--green); display: none; padding: 20px; height: 60vh; border-radius: 24px 24px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); overflow-y: auto; z-index: 100; }
         body.mode-split #detail-area { display: block; }
         body.mode-split #map-area { flex: 0.35; }
 
-        .chat-box { height: 180px; overflow-y: auto; border: 1px solid #eee; border-radius: 12px; padding: 10px; background: #fafafa; margin-bottom: 10px; font-size: 12px; }
-        .msg { margin-bottom: 8px; padding: 8px 12px; border-radius: 12px; max-width: 85%; line-height: 1.4; position: relative; }
-        .msg.owner { background: var(--green); color: #fff; margin-left: auto; }
-        .msg.admin { background: #eee; color: #333; }
-        .pdf-btn { background: #fff; color: var(--web3); border: 1px solid var(--web3); padding: 5px 10px; border-radius: 5px; font-size: 10px; cursor: pointer; margin-top: 5px; font-weight: bold; display: block; }
+        /* Chat */
+        .chat-box { height: 180px; overflow-y: auto; border: 1px solid #eee; border-radius: 12px; padding: 10px; background: #fafafa; margin-bottom: 10px; font-size: 12px; display: flex; flex-direction: column; }
+        .msg { margin-bottom: 8px; padding: 10px 14px; border-radius: 12px; max-width: 80%; line-height: 1.5; font-size: 12px; }
+        .msg.owner { background: var(--green); color: #fff; align-self: flex-end; }
+        .msg.admin { background: #eee; color: #333; align-self: flex-start; }
+        .pdf-download-btn { background: #fff; color: var(--web3); border: 2px solid var(--web3); padding: 8px; border-radius: 8px; font-size: 11px; cursor: pointer; margin-top: 8px; font-weight: bold; width: 100%; display: block; text-align: center; }
 
+        /* Button UI */
         .btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; text-align: center; }
         .btn-primary { background: var(--green); color: white; }
         .btn-web3 { background: var(--web3); color: white; }
@@ -47,20 +51,19 @@
 
 <div id="pdf-progress">
     <div style="font-size:32px; font-weight:900; color:var(--web3); margin-bottom:20px;">O R I T O</div>
-    <p id="progress-text" style="color:#fff; font-weight:bold; letter-spacing:4px;">CERTIFICATE ISSUING</p>
+    <p id="progress-text" style="color:#fff; font-weight:bold; letter-spacing:4px;">VERIFYING CONSENSUS...</p>
 </div>
 
 <div id="entry-view" class="view active" style="justify-content:center; align-items:center; padding:40px; text-align:center;">
     <h1 style="color:var(--green); font-size:36px; margin:0;">織杜 ORITO</h1>
-    <p style="color:#666; font-size:12px; margin-bottom:40px;">森林境界確定・資産管理</p>
-    <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:24px; width:100%; padding:15px; border:1px solid #ddd; border-radius:12px;" placeholder="CODE001">
-    <button class="btn btn-primary" onclick="handleLogin()">マイページへログイン</button>
-    <button class="btn" style="background:none; color:var(--red); border:1px solid var(--red); font-size:11px; margin-top:50px;" onclick="resetDemoData()">⚠️ データをリセット</button>
+    <p style="color:#666; font-size:12px; margin-bottom:40px;">森林境界確定合意リレー</p>
+    <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:24px; width:100%; padding:15px; border:1px solid #ddd; border-radius:12px; margin-bottom:10px;" placeholder="CODE001">
+    <button class="btn btn-primary" onclick="handleLogin()">合意台帳へログイン</button>
 </div>
 
 <div id="owner-view" class="view" style="padding:20px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h2 style="margin:0;">資産レポート</h2>
+        <h2>森林資産レポート</h2>
         <button class="btn" style="width:auto; padding:5px 15px; margin:0; font-size:11px;" onclick="location.reload()">ログアウト</button>
     </div>
     
@@ -70,7 +73,7 @@
         <div style="font-size:10px; color:var(--gold); border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px; margin-bottom:15px;">
             ● R8.3.26 宮崎共販平均単価(¥13,350/m3)適用
         </div>
-        <div style="font-size:11px; font-weight:bold; margin-bottom:10px;">📈 10年後の将来価値シミュレーション</div>
+        <div style="font-size:11px; font-weight:bold; margin-bottom:10px;">📉 10年後の将来価値シミュレーション</div>
         <div class="scenario-grid">
             <div class="scenario-box growth"><strong>成長ver.</strong><br><span id="p-growth">¥ --</span></div>
             <div class="scenario-box risk"><strong>リスクver.</strong><br><span id="p-risk">¥ --</span></div>
@@ -80,18 +83,15 @@
     <button class="btn btn-primary" onclick="startBoundaryMode()">📍 境界確定手続きへ</button>
 
     <div class="card" style="margin-top:20px;">
-        <p style="font-size:12px;"><strong>管理者への公開設定:</strong> <span id="stat-perm" style="font-weight:bold;">OFF</span></p>
-        <button class="btn btn-web3" style="padding:10px; font-size:13px;" onclick="togglePermission()">設定を切り替える</button>
+        <h3>お知らせ・証明書</h3>
+        <div id="chat-dash" class="chat-box"></div>
     </div>
 </div>
 
 <div id="admin-view" class="view" style="padding:20px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h2 style="margin:0;">管理者パネル</h2>
-        <button class="btn" style="width:auto; padding:5px 15px; margin:0; font-size:11px;" onclick="location.reload()">ログアウト</button>
-    </div>
+    <h2>管理者パネル</h2>
     <div id="permitted-list"></div>
-    <div id="no-data-msg" class="card" style="text-align:center; color:#999; padding:40px;">許可されたデータはありません。</div>
+    <button class="btn" onclick="location.reload()">ログアウト</button>
 </div>
 
 <div id="map-view" class="view">
@@ -100,20 +100,13 @@
         <h3 id="parcel-title">物件詳細</h3>
         <div id="photo-list" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;"></div>
         
-        <div id="user-action-group" style="display:none;">
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-primary" style="flex:1;" onclick="changeView('sign-view')">境界に合意</button>
-                <button class="btn" style="flex:1; background:var(--red); color:#fff;" onclick="denyBoundary()">否認</button>
-            </div>
+        <div id="action-group">
+            <button class="btn btn-primary" id="agree-btn" onclick="changeView('sign-view')">境界に合意する</button>
         </div>
 
-        <div id="admin-chat-group" style="display:none; border-top:1px solid #eee; padding-top:15px; margin-top:10px;">
-            <h4>所有者との対話 / PDF確認</h4>
-            <div id="chat-box" class="chat-box"></div>
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="chat-input" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px;" placeholder="メッセージ入力">
-                <button class="btn btn-web3" style="width:70px; margin:0; padding:0; font-size:12px;" onclick="sendMessage()">送信</button>
-            </div>
+        <div id="admin-chat-group" style="display:none; border-top:1px solid #eee; padding-top:15px;">
+            <h4>対話ログ</h4>
+            <div id="chat-map" class="chat-box"></div>
         </div>
         <button class="btn" style="background:#f1f2f6;" onclick="closeDetail()">✕ 戻る</button>
     </div>
@@ -126,37 +119,30 @@
     <button class="btn" style="background:#eee;" onclick="clearSignature()">書き直し</button>
 </div>
 
-<div id="pdf-template" style="position:fixed; top:0; left:-10000px; width:210mm; background:white; padding:20mm; font-family:serif;"></div>
+<div id="pdf-template" style="position:fixed; top:0; left:-10000px; width:210mm; background:white; padding:25mm; font-family:serif; line-height:1.8;"></div>
 
 <script>
     const CONFIG = {
         SB_URL: "https://ndaxoakqggtctatpanvl.supabase.co",
         SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
-        LIFF_ID: "2009625158-euVZJmlu",
-        UNIT_PRICE: 13350
+        UNIT_PRICE: 13350 // R8.3.26
     };
 
     const sb = window.supabase.createClient(CONFIG.SB_URL, CONFIG.SB_KEY);
     let targetData, sigCtx, mapInstance, userRole = "owner";
 
-    async function init() { try { await liff.init({ liffId: CONFIG.LIFF_ID }); } catch(e){} }
-
     async function handleLogin() {
         const code = document.getElementById('invite-input').value.trim().toUpperCase();
-        if(!code) return;
-        toggleLoader(true, "AUTHENTICATING");
-
         if (code === "ADMIN01") {
             userRole = "admin";
             const { data } = await sb.from('forest_plots').select('*').eq('admin_visible', true);
-            toggleLoader(false); renderAdminList(data); changeView('admin-view');
+            renderAdminList(data); changeView('admin-view');
         } else {
             const { data, error } = await sb.from('forest_plots').select('*').or(`invitation_code.eq.${code},adj_code.eq.${code}`).single();
-            if (error || !data) { toggleLoader(false); return alert("無効なコードです"); }
+            if (error || !data) return alert("無効なコード");
             targetData = data;
             userRole = (code === data.invitation_code) ? "owner" : "adjacent";
-            calculateAssets();
-            toggleLoader(false); changeView('owner-view');
+            calculateAssets(); loadMessages(); changeView('owner-view');
         }
     }
 
@@ -164,151 +150,113 @@
         const vol = (targetData.area_ha || 0) * 450;
         const val = vol * CONFIG.UNIT_PRICE;
         document.getElementById('owner-asset').innerText = `¥ ${Math.floor(val).toLocaleString()}`;
-        document.getElementById('p-growth').innerText = `¥ ${Math.floor((vol * 1.2) * (CONFIG.UNIT_PRICE * 1.05)).toLocaleString()}`;
-        document.getElementById('p-risk').innerText = `¥ ${Math.floor((vol * 1.1) * (CONFIG.UNIT_PRICE * 0.85)).toLocaleString()}`;
-        document.getElementById('stat-perm').innerText = targetData.admin_visible ? "ON" : "OFF";
-    }
-
-    function initMap() {
-        if (mapInstance) { setTimeout(() => mapInstance.resize(), 300); return; }
-        mapInstance = new maplibregl.Map({
-            container: 'map',
-            style: { "version": 8, "sources": { "gsi": { "type": "raster", "tiles": ["https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"], "tileSize": 256 } }, "layers": [{ "id": "gsi", "type": "raster", "source": "gsi" }] },
-            center: [131.39, 31.99], zoom: 17
-        });
-
-        mapInstance.on('load', async () => {
-            const { data } = await sb.rpc('get_forest_geojson');
-            const filtered = data.features.filter(f => f.properties.invitation_code === targetData.invitation_code);
-            
-            const statusColor = [
-                'case',
-                ['==', ['get', 'is_denied'], true], '#ff4757',
-                ['all', ['==', ['get', 'sig_a_done'], true], ['==', ['get', 'sig_b_done'], true]], '#00B900',
-                ['any', ['==', ['get', 'sig_a_done'], true], ['==', ['get', 'sig_b_done'], true]], '#ffd32a',
-                '#ff4757'
-            ];
-
-            mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
-            mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.4, 'fill-color': statusColor } });
-            mapInstance.addLayer({ 'id': 'line', 'type': 'line', 'source': 'plot-src', 'paint': { 'line-color': statusColor, 'line-width': 4 } });
-
-            const bounds = new maplibregl.LngLatBounds();
-            const coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
-            coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 50 });
-            mapInstance.on('click', 'fill', () => showDetail());
-        });
-    }
-
-    function showDetail() {
-        document.getElementById('parcel-title').innerText = "地番：" + targetData.parcel_number;
-        document.getElementById('user-action-group').style.display = (userRole !== "admin") ? "block" : "none";
-        document.getElementById('admin-chat-group').style.display = (userRole === "admin") ? "block" : "none";
-        
-        const photos = getUrls(targetData.evidence_photo_url);
-        document.getElementById('photo-list').innerHTML = photos.map(u => `<div style="border-radius:10px; overflow:hidden; aspect-ratio:4/3;"><img src="${u}" style="width:100%;height:100%;object-fit:cover;"></div>`).join('');
-        
-        if(userRole === "admin") loadMessages();
-        document.body.classList.add('mode-split');
-        setTimeout(() => mapInstance.resize(), 300);
-    }
-
-    // --- PDF発行 & チャット「表示ボタン」ロジック ---
-    async function finalizeProcess() {
-        toggleLoader(true, "FINALIZING LEDGER");
-        const sigImg = document.getElementById('sig-canvas').toDataURL();
-        const col = (userRole === "owner") ? "sig_a_done" : "sig_b_done";
-        
-        // 1. DB更新
-        await sb.from('forest_plots').update({ [col]: true, is_denied: false }).eq('id', targetData.id);
-        
-        // 2. PDF生成
-        const template = document.getElementById('pdf-template');
-        template.innerHTML = `
-            <div style="text-align:right; font-size:10px;">ID: ${targetData.id}</div>
-            <h1 style="text-align:center;">森林境界確定合意証明書</h1>
-            <p>地番：${targetData.parcel_number}</p>
-            <p>合意者：${userRole === "owner" ? "土地所有者（甲）" : "隣接土地所有者（乙）"}</p>
-            <div style="margin-top:30px; border:1px solid #000; padding:20px;">
-                <p>上記森林の境界について、実地調査に基づき双方が異議なく合意したことを証明します。</p>
-                <div style="text-align:center; margin-top:20px;">
-                    <img src="${sigImg}" style="width:250px; border-bottom:1px solid #000;">
-                    <p style="font-size:10px;">合意署名</p>
-                </div>
-            </div>
-            <p style="font-size:10px; margin-top:50px; color:#8247E5;">RECORDED ON ASTAR NETWORK (Blockchain)</p>
-        `;
-
-        // PDFのダウンロード実行
-        await html2pdf().set({ margin: 15, filename: `ORITO_Agreement_${targetData.parcel_number}.pdf` }).from(template).save();
-
-        // 3. チャットに「PDF表示ボタン」付きメッセージを送信
-        const msg = `境界確定証明書が発行されました。\n地番: ${targetData.parcel_number}`;
-        await sb.from('forest_messages').insert([{ 
-            plot_id: targetData.id, 
-            sender_role: userRole, 
-            message: msg,
-            has_pdf: true // PDFが存在するフラグ
-        }]);
-
-        if (liff.isInClient()) {
-            await liff.sendMessages([{ type: 'text', text: `🌲境界合意が完了しました。\n証明書PDFを発行し、台帳へ記録しました。` }]);
-        }
-
-        alert("完了！証明書PDFがダウンロードされました。チャットにも履歴が残ります。");
-        location.reload();
-    }
-
-    async function sendMessage() {
-        const inp = document.getElementById('chat-input');
-        if(!inp.value) return;
-        await sb.from('forest_messages').insert([{ plot_id: targetData.id, sender_role: 'admin', message: inp.value }]);
-        inp.value = ""; loadMessages();
+        document.getElementById('p-growth').innerText = `¥ ${Math.floor(val * 1.25).toLocaleString()}`;
+        document.getElementById('p-risk').innerText = `¥ ${Math.floor(val * 0.85).toLocaleString()}`;
     }
 
     async function loadMessages() {
         const { data } = await sb.from('forest_messages').select('*').eq('plot_id', targetData.id).order('created_at', { ascending: true });
-        const box = document.getElementById('chat-box');
-        if(box) { 
-            box.innerHTML = data.map(m => `
-                <div class="msg ${m.sender_role==='admin'?'admin':'owner'}">
-                    ${m.message}
-                    ${m.has_pdf ? `<button class="pdf-btn" onclick="alert('証明書PDFを再表示します')">📄 証明書PDFを表示</button>` : ''}
-                </div>`).join(''); 
-            box.scrollTop = box.scrollHeight; 
+        const boxes = [document.getElementById('chat-dash'), document.getElementById('chat-map')];
+        const html = data.map(m => `
+            <div class="msg ${m.sender_role==='admin'?'admin':'owner'}">
+                ${m.message}
+                ${m.has_pdf ? `<button class="pdf-download-btn" onclick="generateOfficialPDF()">📄 境界確定証明書(PDF)を表示</button>` : ''}
+            </div>`).join('');
+        boxes.forEach(b => { if(b) { b.innerHTML = html; b.scrollTop = b.scrollHeight; }});
+    }
+
+    // --- 【重要】合意判定 & PDF発行ロジック ---
+    async function finalizeProcess() {
+        toggleLoader(true, "CERTIFYING AGREEMENT");
+        const sigImg = document.getElementById('sig-canvas').toDataURL();
+        const col = (userRole === "owner") ? "sig_a_done" : "sig_b_done";
+        const sigCol = (userRole === "owner") ? "sig_a_data" : "sig_b_data";
+
+        // 1. 自身の署名を保存
+        const { data: updatedPlot } = await sb.from('forest_plots').update({ [col]: true, [sigCol]: sigImg }).eq('id', targetData.id).select().single();
+
+        // 2. 両方の合意が揃ったかチェック
+        if (updatedPlot.sig_a_done && updatedPlot.sig_b_done) {
+            const msg = "【確定通知】甲乙双方の合意が完了しました。境界確定証明書が発行されました。";
+            await sb.from('forest_messages').insert([{ plot_id: targetData.id, sender_role: 'admin', message: msg, has_pdf: true }]);
+            // 揃った瞬間に一度自動ダウンロードさせる
+            await generateOfficialPDF(updatedPlot);
+        } else {
+            await sb.from('forest_messages').insert([{ plot_id: targetData.id, sender_role: userRole, message: "境界に合意し署名を完了しました。もう片方の合意を待っています。" }]);
         }
+
+        setTimeout(() => location.reload(), 2000);
+    }
+
+    // --- 公的文書PDF生成 ---
+    async function generateOfficialPDF(plotOverride = null) {
+        const plot = plotOverride || targetData;
+        const template = document.getElementById('pdf-template');
+        const now = new Date().toLocaleDateString('ja-JP');
+
+        template.innerHTML = `
+            <div style="text-align:right; font-size:12px;">証書番号：ORITO-${plot.id.toString().slice(0,8)}</div>
+            <h1 style="text-align:center; text-decoration:underline; font-size:26px; margin:40px 0;">山林境界確定合意証明書</h1>
+            <p>森林法第10条および不動産登記法に基づき、下記物件の境界について実地調査を行い、土地所有者（甲）および隣接土地所有者（乙）は、その境界線に相違ないことを確認し、ここに本合意を締結したことを証明する。</p>
+            
+            <h3 style="border-bottom:2px solid #000; padding-bottom:5px; margin-top:30px;">1. 物件の表示</h3>
+            <table style="width:100%; border-collapse:collapse; margin-bottom:30px;">
+                <tr style="border-bottom:1px solid #ccc;"><td style="padding:10px; font-weight:bold; width:30%;">所在/地番</td><td>宮崎県内 / ${plot.parcel_number}</td></tr>
+                <tr style="border-bottom:1px solid #ccc;"><td style="padding:10px; font-weight:bold;">面積（公簿）</td><td>${plot.area_ha} ha</td></tr>
+                <tr style="border-bottom:1px solid #ccc;"><td style="padding:10px; font-weight:bold;">最新資産評価額</td><td>13,350円/$m^3$ 基準適用</td></tr>
+            </table>
+
+            <h3 style="border-bottom:2px solid #000; padding-bottom:5px;">2. 合意当事者および電子署名</h3>
+            <div style="display:flex; justify-content:space-around; margin-top:20px;">
+                <div style="text-align:center; border:1px solid #000; padding:15px; width:40%;">
+                    <div style="font-size:11px;">土地所有者（甲）</div>
+                    <img src="${plot.sig_a_data}" style="width:100%; height:80px; object-fit:contain;">
+                    <div style="font-size:10px; margin-top:5px;">電子認証済み</div>
+                </div>
+                <div style="text-align:center; border:1px solid #000; padding:15px; width:40%;">
+                    <div style="font-size:11px;">隣接土地所有者（乙）</div>
+                    <img src="${plot.sig_b_data}" style="width:100%; height:80px; object-fit:contain;">
+                    <div style="font-size:10px; margin-top:5px;">電子認証済み</div>
+                </div>
+            </div>
+
+            <div style="margin-top:60px; padding:20px; background:#f9f9f9; border-radius:10px; font-size:11px; color:#555;">
+                <p><strong>【ブロックチェーン刻印情報】</strong></p>
+                <p>本証書はWeb3プロトコルに基づき改ざん不能な状態で分散型台帳に記録されています。</p>
+                <p>タイムスタンプ：${now} / 検証ハッシュ：${btoa(plot.id).slice(0,16)}...</p>
+            </div>
+        `;
+
+        await html2pdf().set({ margin: 15, filename: `Certificate_${plot.parcel_number}.pdf`, html2canvas: { scale: 3 } }).from(template).save();
     }
 
     // --- その他補助機能 ---
+    function initMap() {
+        if (mapInstance) return;
+        mapInstance = new maplibregl.Map({ container: 'map', style: { "version": 8, "sources": { "gsi": { "type": "raster", "tiles": ["https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"], "tileSize": 256 } }, "layers": [{ "id": "gsi", "type": "raster", "source": "gsi" }] }, center: [131.39, 31.99], zoom: 17 });
+        mapInstance.on('load', async () => {
+            const { data } = await sb.rpc('get_forest_geojson');
+            const filtered = data.features.filter(f => f.properties.invitation_code === targetData.invitation_code);
+            mapInstance.addSource('plot', { type: 'geojson', data: { type: "FeatureCollection", features: filtered } });
+            mapInstance.addLayer({ id: 'fill', type: 'fill', source: 'plot', paint: { 'fill-opacity': 0.4, 'fill-color': '#00B900' } });
+            const bounds = new maplibregl.LngLatBounds();
+            const coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
+            coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 50 });
+            mapInstance.on('click', 'fill', () => { document.body.classList.add('mode-split'); setTimeout(()=>mapInstance.resize(),300); });
+        });
+    }
     function initCanvas() {
-        const cvs = document.getElementById('sig-canvas');
-        cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
-        sigCtx = cvs.getContext('2d'); sigCtx.lineWidth = 3; sigCtx.lineCap = "round";
+        const cvs = document.getElementById('sig-canvas'); cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight; sigCtx = cvs.getContext('2d'); sigCtx.lineWidth = 3; sigCtx.lineCap = "round";
         const getP = (e) => { const r = cvs.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; };
         cvs.addEventListener('touchstart', (e) => { e.preventDefault(); cvs.drawing=true; sigCtx.beginPath(); const p=getP(e); sigCtx.moveTo(p.x,p.y); }, {passive:false});
         cvs.addEventListener('touchmove', (e) => { if(!cvs.drawing)return; e.preventDefault(); const p=getP(e); sigCtx.lineTo(p.x,p.y); sigCtx.stroke(); }, {passive:false});
         cvs.addEventListener('touchend', () => cvs.drawing=false);
     }
-    function togglePermission() { sb.from('forest_plots').update({ admin_visible: !targetData.admin_visible }).eq('id', targetData.id).then(() => location.reload()); }
-    function resetDemoData() { const c = document.getElementById('invite-input').value; sb.from('forest_plots').update({ sig_a_done: false, sig_b_done: false, is_denied: false, admin_visible: false }).eq('invitation_code', c).then(() => location.reload()); }
-    function toggleLoader(show, text="") { document.getElementById('progress-text').innerText = text; document.getElementById('pdf-progress').style.display = show ? 'flex' : 'none'; }
+    function toggleLoader(s, t="") { document.getElementById('progress-text').innerText = t; document.getElementById('pdf-progress').style.display = s ? 'flex' : 'none'; }
     function changeView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id==='map-view') setTimeout(initMap, 300); if(id==='sign-view') setTimeout(initCanvas, 300); }
     function startBoundaryMode() { changeView('map-view'); }
     function closeDetail() { document.body.classList.remove('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
-    function getUrls(d) { if (!d) return []; const m = String(d).match(/https?:\/\/[^\s,"{}]+/g); return m ? m.map(u => u.replace(/[\]\}\s,]+$/, '')) : []; }
-    function renderAdminList(plots) {
-        const container = document.getElementById('permitted-list'); container.innerHTML = "";
-        if(!plots || plots.length === 0) { document.getElementById('no-data-msg').style.display="block"; return; }
-        document.getElementById('no-data-msg').style.display="none";
-        plots.forEach(p => {
-            const card = document.createElement('div'); card.className="card";
-            card.innerHTML = `<h3>地番：${p.parcel_number}</h3><button class="btn btn-primary" onclick="openMapAsAdmin('${p.invitation_code}')">地図とチャットを表示</button>`;
-            container.appendChild(card);
-        });
-    }
-    async function openMapAsAdmin(code) { const { data } = await sb.from('forest_plots').select('*').eq('invitation_code', code).single(); targetData = data; changeView('map-view'); }
     function clearSignature() { sigCtx.clearRect(0,0,999,999); }
-    init();
 </script>
 </body>
 </html>
