@@ -2,165 +2,268 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8" />
-    <title>織杜 ORITO</title>
+    <title>織杜 ORITO - 森林アセットデモ</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        :root { --green: #00B900; --web3: #8247E5; --dark: #1b4d3e; --bg: #f4f7f6; }
-        body { margin: 0; font-family: sans-serif; background: var(--bg); color: #2d3436; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
+        :root { --green: #00B900; --web3: #8247E5; --dark: #1b4d3e; --blue: #007bff; --bg: #f8f9fa; }
+        body { margin: 0; font-family: "Hiragino Mincho ProN", serif; background: var(--bg); color: #2d3436; height: 100vh; overflow: hidden; position: fixed; width: 100%; }
         .view { display: none; height: 100vh; flex-direction: column; overflow-y: auto; background: #fff; -webkit-overflow-scrolling: touch; }
         .view.active { display: flex; }
+        
+        /* Dashboard & Card */
         .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .asset-val { font-size: 28px; font-weight: bold; color: #fff; margin: 10px 0; }
-        .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; -webkit-tap-highlight-color: transparent; }
+        .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .btn-primary { background: var(--green); color: white; }
-        /* 演出 */
+        .btn-web3 { background: var(--web3); color: white; }
+        .btn-outline { background: #fff; border: 2px solid var(--green); color: var(--green); }
+
+        /* Map UI */
+        #map-area { flex: 1; position: relative; width: 100%; min-height: 300px; transition: flex 0.4s ease; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        #detail-area { background: #fff; border-top: 5px solid var(--green); display: none; padding: 20px; overflow-y: auto; height: 60vh; border-radius: 24px 24px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,0.15); z-index: 50; }
+        body.mode-split #detail-area { display: block; }
+        body.mode-split #map-area { flex: 0.35; }
+
+        /* ORITO Animation */
         #pdf-progress { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; }
-        .orito-loader span { font-size: 36px; font-weight: 900; color: var(--web3); animation: blink 1s infinite; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        #map { height: 40vh; width: 100%; }
-        .sig-box { border: 2px dashed #ccc; width: 100%; height: 250px; touch-action: none; }
+        .orito-loader { display: flex; gap: 10px; margin-bottom: 20px; }
+        .orito-loader span { font-size: 42px; font-weight: 900; color: transparent; -webkit-text-stroke: 1px var(--web3); animation: orito-glow 2s ease-in-out infinite; }
+        @keyframes orito-glow { 0%, 100% { color: transparent; -webkit-text-stroke: 1px #444; } 50% { color: var(--web3); -webkit-text-stroke: 1px var(--web3); text-shadow: 0 0 20px var(--web3); } }
+        .orito-loader span:nth-child(2) { animation-delay: 0.2s; }
+        .orito-loader span:nth-child(3) { animation-delay: 0.4s; }
+        .orito-loader span:nth-child(4) { animation-delay: 0.6s; }
+        .orito-loader span:nth-child(5) { animation-delay: 0.8s; }
+
+        /* Photo Grid */
+        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .photo-item { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3; border: 3px solid #eee; }
+        .photo-item.highlight { border-color: var(--blue); transform: scale(1.02); box-shadow: 0 0 15px rgba(0,123,255,0.4); }
+        .photo-item img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
 
 <div id="pdf-progress">
-    <div class="orito-loader" style="display:flex; gap:5px;"><span>O</span><span>R</span><span>I</span><span>T</span><span>O</span></div>
-    <p id="progress-text" style="color:#fff; margin-top:20px;">PROCESSSING...</p>
+    <div class="orito-loader"><span>O</span><span>R</span><span>I</span><span>T</span><span>O</span></div>
+    <p id="progress-text" style="color:#fff; font-weight:bold; letter-spacing:4px;">AUTHENTICATING</p>
 </div>
 
-<div id="entry-view" class="view active" style="justify-content:center; align-items:center; padding:30px; text-align:center;">
-    <h1 style="color:var(--green); font-size:32px;">織杜 ORITO</h1>
-    <input type="text" id="invite-input" style="width:100%; padding:18px; border:2px solid #ddd; border-radius:12px; font-size:24px; text-align:center;" placeholder="CODE001">
-    <button class="btn btn-primary" onclick="loadDashboard()">台帳へアクセス</button>
-    <p id="debug-info" style="font-size:10px; color:#999; margin-top:20px;"></p>
+<div id="entry-view" class="view active" style="justify-content:center; align-items:center; padding:40px; text-align:center;">
+    <h1 style="color:var(--green); font-size:32px; margin:0;">織杜 ORITO</h1>
+    <p style="color:#666; font-size:12px; margin-bottom:30px;">招待コードを入力してください</p>
+    <input type="text" id="invite-input" style="width:100%; padding:18px; border:2px solid #ddd; border-radius:12px; font-size:24px; text-align:center; letter-spacing:4px;" placeholder="CODE001">
+    <button class="btn btn-primary" onclick="handleLogin()">マイページにログイン</button>
+    <p style="font-size:10px; color:#999; margin-top:20px;">[所有者: ORITO001] [管理者: ADMIN01]</p>
 </div>
 
-<div id="dashboard-view" class="view" style="padding:20px;">
-    <h2>森林資産レポート</h2>
-    <div class="card" style="background: linear-gradient(135deg, var(--dark), #2e7d32); color:#fff;">
+<div id="owner-view" class="view" style="padding:20px;">
+    <h2>森林所有者パネル</h2>
+    <div class="card" style="background: linear-gradient(135deg, var(--dark), #2e7d32); color:#fff; border:none;">
         <div style="font-size:11px; opacity:0.8;">現在の推定資産価値</div>
-        <div class="asset-val" id="asset-total">¥ --,---,---</div>
+        <div class="asset-val" id="owner-asset">¥ --,---,---</div>
     </div>
-    <button class="btn btn-primary" onclick="changeView('map-view')">📍 境界確定合意へ</button>
+    
+    <div class="card" id="perm-status-card" style="background:#fffbe6; border-color:#ffe58f;">
+        <p style="font-size:13px; margin:0 0 10px 0;"><strong>管理者への公開設定:</strong> <span id="perm-label">非公開</span></p>
+        <button id="perm-btn" class="btn btn-web3" style="padding:10px; font-size:14px;" onclick="togglePermission(true)">管理者に閲覧を許可する</button>
+    </div>
+
+    <button class="btn btn-outline" onclick="startBoundaryMode()">📍 境界確定合意（調査図）</button>
+</div>
+
+<div id="admin-view" class="view" style="padding:20px;">
+    <h2>管理者パネル</h2>
+    <p style="font-size:12px; color:#666;">所有者から許可が出た森林のみ表示されます。</p>
+    <div id="permitted-list">
+        </div>
+    <div id="no-data-msg" class="card" style="text-align:center; color:#999; padding:40px;">
+        現在閲覧可能なデータはありません。<br>所有者の許可をお待ちください。
+    </div>
 </div>
 
 <div id="map-view" class="view">
-    <div id="map"></div>
-    <div style="padding:20px;">
-        <h3 id="parcel-title">物件確認</h3>
-        <button class="btn btn-primary" onclick="changeView('agree-view')">署名へ</button>
+    <div id="map-area"><div id="map"></div></div>
+    <div id="detail-area">
+        <h3 id="parcel-title" style="margin:0 0 10px 0;">物件確認</h3>
+        <div id="photo-list" class="photo-grid"></div>
+        <button class="btn" style="background:#f1f2f6;" onclick="closeDetail()">✕ 閉じる</button>
     </div>
 </div>
 
-<div id="agree-view" class="view" style="padding:20px;">
-    <h3>署名</h3>
-    <canvas id="sig-canvas" class="sig-box"></canvas>
-    <button class="btn btn-primary" onclick="finalizeAll()">確定</button>
-</div>
-
 <script>
-    const CONFIG = {
+    // --- 変数はここだけで宣言し、重複を避ける ---
+    const APP_CONFIG = {
         SB_URL: "https://ndaxoakqggtctatpanvl.supabase.co",
         SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
         LIFF_ID: "2009625158-euVZJmlu"
     };
 
-    const supabase = window.supabase.createClient(CONFIG.SB_URL, CONFIG.SB_KEY);
-    let targetData, sigCtx;
+    const supabaseClient = window.supabase.createClient(APP_CONFIG.SB_URL, APP_CONFIG.SB_KEY);
+    let targetData, mapInstance, pointsGeoJSON, userRole = "owner";
 
-    // 起動時にLIFF初期化
-    window.onload = async () => {
-        try {
-            await liff.init({ liffId: CONFIG.LIFF_ID });
-            document.getElementById('debug-info').innerText = "LIFF接続完了";
-        } catch(e) {
-            document.getElementById('debug-info').innerText = "LIFFエラー: " + e.message;
-        }
-    };
+    async function init() {
+        try { await liff.init({ liffId: APP_CONFIG.LIFF_ID }); } catch(e) {}
+    }
 
-    async function loadDashboard() {
-        const code = document.getElementById('invite-input').value.toUpperCase().trim();
-        if(!code) return alert("コードを入力してください");
-
+    // ログイン処理（所有者と管理者を分ける）
+    async function handleLogin() {
+        const code = document.getElementById('invite-input').value.trim().toUpperCase();
         toggleLoader(true, "認証中...");
-        
-        try {
-            // Supabaseからデータ取得
-            const { data, error } = await supabase
-                .from('forest_plots')
-                .select('*')
-                .eq('invitation_code', code)
-                .single();
-            
-            if (error) throw error;
-            if (!data) throw new Error("招待コードが見つかりません");
 
-            targetData = data;
-            document.getElementById('asset-total').innerText = `¥ ${Math.floor((data.area_ha || 0) * 450 * 14500).toLocaleString()}`;
-            
-            // アニメーション演出のために少し待つ
+        if (code === "ADMIN01") {
+            // 管理者モード
+            userRole = "admin";
+            const { data, error } = await supabaseClient.from('forest_plots').select('*').eq('admin_visible', true);
             setTimeout(() => {
                 toggleLoader(false);
-                changeView('dashboard-view');
-            }, 1500);
-
-        } catch (err) {
-            toggleLoader(false);
-            // スマホでもわかるようにエラーを表示
-            alert("エラーが発生しました:\n" + err.message + "\n\n1. SupabaseのRLS設定を確認してください\n2. ネット接続を確認してください");
-            console.error(err);
+                renderAdminList(data);
+                changeView('admin-view');
+            }, 1200);
+        } else {
+            // 所有者モード
+            userRole = "owner";
+            const { data, error } = await supabaseClient.from('forest_plots').select('*').eq('invitation_code', code).single();
+            setTimeout(() => {
+                toggleLoader(false);
+                if (error || !data) return alert("無効なコードです");
+                targetData = data;
+                updateOwnerUI();
+                changeView('owner-view');
+            }, 1200);
         }
     }
 
+    function updateOwnerUI() {
+        const val = (targetData.area_ha || 0) * 450 * 14500;
+        document.getElementById('owner-asset').innerText = `¥ ${Math.floor(val).toLocaleString()}`;
+        
+        const isPermitted = targetData.admin_visible;
+        document.getElementById('perm-label').innerText = isPermitted ? "公開中" : "非公開";
+        document.getElementById('perm-label').style.color = isPermitted ? "var(--green)" : "var(--red)";
+        document.getElementById('perm-btn').innerText = isPermitted ? "管理者の閲覧権限を取り消す" : "管理者に閲覧を許可する";
+        document.getElementById('perm-btn').onclick = () => togglePermission(!isPermitted);
+    }
+
+    async function togglePermission(status) {
+        toggleLoader(true, "設定更新中...");
+        const { error } = await supabaseClient.from('forest_plots').update({ admin_visible: status }).eq('id', targetData.id);
+        
+        if (!error) {
+            targetData.admin_visible = status;
+            updateOwnerUI();
+        }
+        setTimeout(() => toggleLoader(false), 800);
+    }
+
+    function renderAdminList(plots) {
+        const listContainer = document.getElementById('permitted-list');
+        const noData = document.getElementById('no-data-msg');
+        listContainer.innerHTML = "";
+        
+        if (!plots || plots.length === 0) {
+            noData.style.display = "block";
+            return;
+        }
+        
+        noData.style.display = "none";
+        plots.forEach(plot => {
+            const card = document.createElement('div');
+            card.className = "card";
+            card.innerHTML = `
+                <p style="margin:0; font-size:12px; color:#999;">${plot.location}</p>
+                <h3 style="margin:5px 0;">地番：${plot.parcel_number}</h3>
+                <button class="btn btn-primary" onclick="openMapAsAdmin('${plot.invitation_code}')" style="padding:10px; font-size:14px;">詳細・地図を見る</button>
+            `;
+            listContainer.appendChild(card);
+        });
+    }
+
+    async function openMapAsAdmin(code) {
+        const { data } = await supabaseClient.from('forest_plots').select('*').eq('invitation_code', code).single();
+        targetData = data;
+        changeView('map-view');
+    }
+
+    function startBoundaryMode() { changeView('map-view'); }
+
+    // --- マップ・写真・杭の連動ロジック（スマホ最適化済） ---
+    function initMap() {
+        if (mapInstance) { mapInstance.resize(); return; }
+        mapInstance = new maplibregl.Map({
+            container: 'map',
+            style: { "version": 8, "sources": { "gsi": { "type": "raster", "tiles": ["https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"], "tileSize": 256 } }, "layers": [{ "id": "gsi", "type": "raster", "source": "gsi" }] },
+            center: [131.39, 31.99], zoom: 17, preserveDrawingBuffer: true
+        });
+
+        mapInstance.on('load', async () => {
+            const { data } = await supabaseClient.rpc('get_forest_geojson');
+            const filtered = data.features.filter(f => f.properties.invitation_code === targetData.invitation_code);
+            
+            mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
+            mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.3, 'fill-color': '#00B900' } });
+
+            // 杭データ
+            const photos = getUrls(targetData.evidence_photo_url);
+            let coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
+            const pts = photos.map((u, i) => ({
+                "type": "Feature", "geometry": { "type": "Point", "coordinates": coords[Math.floor((i / photos.length) * (coords.length - 1))] },
+                "properties": { "idx": (i + 1).toString() }
+            }));
+            pointsGeoJSON = { "type": "FeatureCollection", "features": pts };
+            mapInstance.addSource('pts-src', { 'type': 'geojson', 'data': pointsGeoJSON });
+            mapInstance.addLayer({ 'id': 'pts-c', 'type': 'circle', 'source': 'pts-src', 'paint': { 'circle-radius': 14, 'circle-color': '#007bff', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } });
+            
+            const bounds = new maplibregl.LngLatBounds(); coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 50 });
+
+            // タップアクション
+            mapInstance.on('click', 'fill', () => showDetail());
+            mapInstance.on('click', 'pts-c', (e) => {
+                const idx = e.features[0].properties.idx;
+                showDetail();
+                setTimeout(() => {
+                    document.querySelectorAll('.photo-item').forEach(el => el.classList.remove('highlight'));
+                    const target = document.getElementById(`photo-${idx}`);
+                    if (target) { target.classList.add('highlight'); target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                }, 300);
+            });
+        });
+    }
+
+    function showDetail() {
+        if(document.body.classList.contains('mode-split')) return;
+        document.getElementById('parcel-title').innerText = "地番：" + targetData.parcel_number;
+        document.getElementById('photo-list').innerHTML = getUrls(targetData.evidence_photo_url).map((u, i) => `
+            <div class="photo-item" id="photo-${i+1}" onclick="focusOnMap(${i+1})">
+                <span class="photo-badge">杭No.${i+1}</span><img src="${u}">
+            </div>`).join('');
+        document.body.classList.add('mode-split');
+        setTimeout(() => mapInstance.resize(), 300);
+    }
+
+    function focusOnMap(idx) {
+        const feature = pointsGeoJSON.features[idx-1];
+        if (feature) mapInstance.flyTo({ center: feature.geometry.coordinates, zoom: 19 });
+    }
+
+    // --- Helpers ---
     function toggleLoader(show, text = "") {
         document.getElementById('progress-text').innerText = text;
         document.getElementById('pdf-progress').style.display = show ? 'flex' : 'none';
     }
-
     function changeView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        if(id === 'map-view') setTimeout(initMap, 200);
-        if(id === 'agree-view') setTimeout(initCanvas, 200);
+        if (id === 'map-view') setTimeout(initMap, 200);
     }
+    function closeDetail() { document.body.classList.remove('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
+    function getUrls(d) { if (!d) return []; const m = String(d).match(/https?:\/\/[^\s,"{}]+/g); return m ? m.map(u => u.replace(/[\]\}\s,]+$/, '')) : []; }
 
-    function initMap() {
-        const map = new maplibregl.Map({
-            container: 'map',
-            style: { "version": 8, "sources": { "gsi": { "type": "raster", "tiles": ["https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"], "tileSize": 256 } }, "layers": [{ "id": "gsi", "type": "raster", "source": "gsi" }] },
-            center: [131.39, 31.99], zoom: 16
-        });
-    }
-
-    function initCanvas() {
-        const cvs = document.getElementById('sig-canvas');
-        cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
-        sigCtx = cvs.getContext('2d');
-        sigCtx.lineWidth = 3; sigCtx.lineCap = "round";
-
-        const getPos = (e) => {
-            const rect = cvs.getBoundingClientRect();
-            const touch = e.touches ? e.touches[0] : e;
-            return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
-        };
-        const start = (e) => { sigCtx.beginPath(); const p = getPos(e); sigCtx.moveTo(p.x, p.y); e.preventDefault(); };
-        const move = (e) => { const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); e.preventDefault(); };
-        
-        cvs.addEventListener('touchstart', start, {passive: false});
-        cvs.addEventListener('touchmove', move, {passive: false});
-        cvs.addEventListener('mousedown', start);
-        cvs.addEventListener('mousemove', (e) => { if(e.buttons) move(e); });
-    }
-
-    async function finalizeAll() {
-        alert("ブロックチェーンに記録しました。");
-        location.reload();
-    }
+    init();
 </script>
 </body>
 </html>
