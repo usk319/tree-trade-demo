@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
-        :root { --green: #00B900; --web3: #8247E5; --dark: #1b4d3e; --gold: #f1c40f; --blue: #007bff; --red: #ff4757; --bg: #f4f7f6; }
+        :root { --green: #00B900; --web3: #8247E5; --dark: #1b4d3e; --gold: #f1c40f; --blue: #007bff; --red: #ff4757; --bg: #f8f9fa; }
         body { margin: 0; font-family: "Hiragino Mincho ProN", serif; background: var(--bg); color: #2d3436; height: 100vh; overflow: hidden; position: fixed; width: 100%; }
         .view { display: none; height: 100vh; flex-direction: column; overflow-y: auto; background: #fff; -webkit-overflow-scrolling: touch; }
         .view.active { display: flex; }
@@ -20,9 +20,9 @@
         .asset-val { font-size: 32px; font-weight: bold; color: #fff; margin: 10px 0; }
         
         .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .scenario-box { padding: 12px; border-radius: 10px; font-size: 12px; color: #fff; }
-        .growth { background: rgba(0, 185, 0, 0.2); border: 1px solid var(--green); color: #fff; }
-        .risk { background: rgba(255, 71, 87, 0.2); border: 1px solid var(--red); color: #fff; }
+        .scenario-box { padding: 12px; border-radius: 10px; font-size: 12px; }
+        .growth { background: rgba(0, 185, 0, 0.15); border: 1px solid var(--green); color: #fff; }
+        .risk { background: rgba(255, 71, 87, 0.15); border: 1px solid var(--red); color: #fff; }
 
         #map-area { flex: 1; position: relative; width: 100%; min-height: 300px; transition: flex 0.4s ease; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
@@ -33,6 +33,7 @@
         .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .btn-primary { background: var(--green); color: white; }
         .btn-web3 { background: var(--web3); color: white; }
+        .btn-outline { background: #fff; border: 1px solid #ddd; color: #999; }
 
         #pdf-progress { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; }
         .orito-loader { display: flex; gap: 10px; margin-bottom: 20px; }
@@ -45,7 +46,7 @@
 
 <div id="pdf-progress">
     <div class="orito-loader"><span>O</span><span>R</span><span>I</span><span>T</span><span>O</span></div>
-    <div id="progress-text" style="color:var(--web3); font-weight:bold; letter-spacing:4px; text-align:center;">SIMULATING ASSET VALUE...</div>
+    <p id="progress-text" style="color:var(--web3); font-weight:bold; letter-spacing:4px; text-align:center;">SIMULATING ASSET VALUE...</p>
 </div>
 
 <div id="entry-view" class="view active" style="justify-content:center; align-items:center; padding:40px;">
@@ -60,7 +61,7 @@
         <div style="font-size:12px; opacity:0.8;">現在の推定立木評価額</div>
         <div class="asset-val" id="owner-asset">¥ --,---,---</div>
         <div style="font-size:10px; color:var(--gold); border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px; margin-bottom:15px;">
-            ● R8.3.26 宮崎共販平均単価(¥13,350/m3)適用
+            ● R8.3.26 宮崎共販平均単価(¥13,350/m3)適用 
         </div>
 
         <div style="font-size:11px; font-weight:bold;">📉 10年後の将来価値シミュレーション</div>
@@ -79,7 +80,7 @@
     </div>
     
     <div class="card" style="background:#fffbe6; font-size:12px; border-color:#ffe58f;">
-        <strong>🌲 AI診断:</strong> 宮崎共販速報(R8.3.26)ではスギ中目に一服感があるものの、輸出用C材は強保合です。世界的な原油価格高騰により搬出コスト上昇の懸念があるため、早期の境界確定と有利な時期の売却検討を推奨します。
+        <strong>🌲 AI診断:</strong> 宮崎共販速報(R8.3.26)ではスギ平均単価が13,350円/$m^3$となっており[cite: 2, 13]、中目材に一服感があるものの輸出C材は堅調です。物流コスト増のリスクに備え、早期の境界確定を推奨します。
     </div>
 
     <button class="btn btn-primary" style="background:#fff; border:1px solid var(--green); color:var(--green); text-align:left;" onclick="startBoundaryMode()">
@@ -90,9 +91,20 @@
     </button>
     
     <div class="card" style="margin-top:20px; border-color:#eee;">
-        <p style="font-size:13px; margin:0 0 10px 0;"><strong>管理者閲覧設定:</strong></p>
+        <p style="font-size:13px; margin:0 0 10px 0;"><strong>管理者閲覧設定:</strong> <span id="stat-perm" style="font-weight:bold;">非公開</span></p>
         <button id="perm-btn" class="btn btn-web3" style="padding:10px; font-size:14px; margin:0;" onclick="togglePermission()">管理者への公開を切り替える</button>
     </div>
+
+    <button class="btn btn-outline" style="color:var(--red); border-color:var(--red); margin-top:30px; font-size:13px;" onclick="resetDemoData()">
+        ⚠️ デモデータを初期化（リセット）
+    </button>
+</div>
+
+<div id="admin-view" class="view" style="padding:20px;">
+    <h2>管理者パネル</h2>
+    <div id="permitted-list"></div>
+    <div id="no-data-msg" class="card" style="text-align:center; color:#999; padding:40px;">許可された森林はありません。</div>
+    <button class="btn btn-outline" onclick="location.reload()">ログアウト</button>
 </div>
 
 <div id="map-view" class="view">
@@ -136,8 +148,8 @@
         SB_URL: "https://ndaxoakqggtctatpanvl.supabase.co",
         SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
         LIFF_ID: "2009625158-euVZJmlu",
-        MARKET_PRICE: 13350, // R8.3.26 平均単価
-        VOL_COEF: 450        // 1haあたりの材積
+        MARKET_PRICE: 13350, 
+        VOL_COEF: 450        
     };
 
     const supabase = window.supabase.createClient(CONFIG.SB_URL, CONFIG.SB_KEY);
@@ -148,28 +160,29 @@
     async function handleLogin() {
         const code = document.getElementById('invite-input').value.trim().toUpperCase();
         toggleLoader(true, "AUTHENTICATING");
-        const { data, error } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
-        
-        setTimeout(() => {
-            toggleLoader(false);
-            if (error || !data) return alert("無効なコードです");
-            targetData = data;
-            calculateAssetScenarios();
-            changeView('owner-view');
-        }, 1200);
+
+        if (code === "ADMIN01") {
+            const { data } = await supabase.from('forest_plots').select('*').eq('admin_visible', true);
+            setTimeout(() => { toggleLoader(false); renderAdminList(data); changeView('admin-view'); }, 1200);
+        } else {
+            const { data, error } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
+            setTimeout(() => {
+                toggleLoader(false);
+                if (error || !data) return alert("無効なコードです");
+                targetData = data;
+                calculateAssetScenarios();
+                updateDashboardUI();
+                changeView('owner-view');
+            }, 1200);
+        }
     }
 
-    // 資産価値計算シミュレーション
     function calculateAssetScenarios() {
         const area = targetData.area_ha || 0;
         const currentVol = area * CONFIG.VOL_COEF;
         const currentVal = currentVol * CONFIG.MARKET_PRICE;
-
-        // 10年後の成長ver: 材積+20% (年2%), 価格+5% (年0.5%)
         const growthVal = (currentVol * 1.2) * (CONFIG.MARKET_PRICE * 1.05);
-        // 10年後のリスクver: 材積+10% (生長鈍化), 価格-15% (コスト増による立木価格の下落)
         const riskVal = (currentVol * 1.1) * (CONFIG.MARKET_PRICE * 0.85);
-
         document.getElementById('owner-asset').innerText = `¥ ${Math.floor(currentVal).toLocaleString()}`;
         document.getElementById('pred-growth').innerText = `¥ ${Math.floor(growthVal).toLocaleString()}`;
         document.getElementById('pred-risk').innerText = `¥ ${Math.floor(riskVal).toLocaleString()}`;
@@ -177,73 +190,46 @@
         document.getElementById('trade-price').value = Math.floor(currentVal);
     }
 
-    function startBoundaryMode() { changeView('map-view'); }
-    function openTimberView() { changeView('timber-view'); }
-    function startFinalFlow(mode) { 
-        currentMode = mode; 
-        document.getElementById('sign-title').innerText = mode === 'trade' ? "立木売買契約署名" : "境界確定合意署名";
-        changeView('sign-view'); 
+    function updateDashboardUI() {
+        document.getElementById('stat-perm').innerText = targetData.admin_visible ? "公開中" : "非公開";
+        document.getElementById('stat-perm').style.color = targetData.admin_visible ? "var(--green)" : "var(--red)";
     }
 
-    // --- 保存 & 公文書PDF生成 ---
-    async function finalizeProcess() {
-        toggleLoader(true, "FINALIZING BLOCKCHAIN RECORD");
-        const sigData = document.getElementById('sig-canvas').toDataURL();
-        const txId = (currentMode === 'trade' ? "TMB-" : "BN-") + Date.now().toString().slice(-6);
-        const mapImg = mapInstance.getCanvas().toDataURL();
-
-        const updates = currentMode === 'trade' 
-            ? { is_traded: true, trade_price: document.getElementById('trade-price').value, trade_deadline: document.getElementById('trade-deadline').value }
-            : { sig_a_done: true, sig_a_data: sigData, is_agreed: (currentMode === 'agree') };
-
-        await supabase.from('forest_plots').update(updates).eq('id', targetData.id);
+    // --- デモ用初期化関数 ---
+    async function resetDemoData() {
+        if(!confirm("デモ用にこの森林のステータスをすべてリセットしますか？")) return;
+        toggleLoader(true, "INITIALIZING DEMO DATA");
         
-        const template = document.getElementById('pdf-template');
-        const title = currentMode === 'trade' ? "立木売買契約書" : "山林境界確定合意証明書";
-        
-        template.innerHTML = `
-            <div style="text-align:right; font-size:10px;">管理番号：${txId}<br>発行：${new Date().toLocaleDateString('ja-JP')}</div>
-            <h1 style="text-align:center; text-decoration:underline; font-size:22px; margin:30px 0;">${title}</h1>
-            <p>森林法及び不動産登記法に基づき、地権者立会いのもと現地調査を実施した。その結果、下記対象物件の境界および資産価値を当事者双方が確認し、本合意を締結したことを証明する。</p>
-            
-            <h3 style="border-bottom:2px solid #000; padding-bottom:5px;">1. 物件の表示</h3>
-            <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
-                <tr><td style="width:25%; font-weight:bold; border:1px solid #000; padding:8px;">所在</td><td style="border:1px solid #000; padding:8px;">${targetData.location || '宮崎県内'}</td></tr>
-                <tr><td style="font-weight:bold; border:1px solid #000; padding:8px;">地番</td><td style="border:1px solid #000; padding:8px;">${targetData.parcel_number}</td></tr>
-                <tr><td style="font-weight:bold; border:1px solid #000; padding:8px;">面積</td><td style="border:1px solid #000; padding:8px;">${targetData.area_ha} ha</td></tr>
-            </table>
-
-            <h3 style="border-bottom:1px solid #000; padding-bottom:5px;">2. 実地調査図面</h3>
-            <div style="text-align:center; padding:10px;"><img src="${mapImg}" style="width:100%; max-height:300px; object-fit:contain; border:1px solid #eee;"></div>
-
-            <div style="margin-top:40px; display:flex; justify-content:space-around;">
-                <div style="text-align:center; width:40%; border:1px solid #000; padding:15px;">
-                    <div style="font-size:10px;">署名（土地所有者）</div>
-                    <img src="${sigData}" style="width:100%; height:80px; object-fit:contain;">
-                </div>
-                <div style="text-align:center; width:40%; border:1px solid #000; padding:15px;">
-                    <div style="font-size:10px;">管理者/隣接者（電子認証印）</div>
-                    <div style="height:80px; line-height:80px; color:#ddd; font-weight:bold;">VERIFIED</div>
-                </div>
-            </div>
-
-            <div style="margin-top:30px; border:1px solid #8247E5; padding:15px; background:#fbf8ff; font-family:monospace; font-size:9px;">
-                [WEB3 PROOF RECORD]<br>
-                LEDGER ID: ${txId}<br>
-                VALIDATED ON: ASTAR NETWORK<br>
-                TIMESTAMP: ${new Date().toISOString()}
-            </div>
-        `;
-
-        await html2pdf().set({ margin: 15, filename: `${txId}.pdf`, html2canvas: { scale: 2, useCORS: true } }).from(template).save();
+        const { error } = await supabase.from('forest_plots').update({
+            sig_a_done: false,
+            sig_a_data: null,
+            admin_visible: false,
+            is_agreed: false,
+            is_traded: false,
+            trade_price: null,
+            trade_deadline: null
+        }).eq('id', targetData.id);
 
         setTimeout(() => {
-            alert("ブロックチェーンへの刻印および公式証明書の発行が完了しました。");
-            location.reload();
-        }, 1500);
+            toggleLoader(false);
+            if (error) alert("初期化失敗: " + error.message);
+            else {
+                alert("初期化完了。デモを再開できます。");
+                location.reload();
+            }
+        }, 2000);
     }
 
-    // --- その他ヘルパー (マップ・演出・権限管理等) は既存コードを継承 ---
+    async function togglePermission() {
+        toggleLoader(true, "UPDATING");
+        const nextStatus = !targetData.admin_visible;
+        await supabase.from('forest_plots').update({ admin_visible: nextStatus }).eq('id', targetData.id);
+        targetData.admin_visible = nextStatus;
+        updateDashboardUI();
+        setTimeout(() => toggleLoader(false), 800);
+    }
+
+    // --- マップ・署名・PDF生成 (既存ロジック継承) ---
     function initMap() {
         if (mapInstance) return;
         mapInstance = new maplibregl.Map({
@@ -256,25 +242,29 @@
             const filtered = data.features.filter(f => f.properties.invitation_code === targetData.invitation_code);
             mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
             mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.3, 'fill-color': '#00B900' } });
+            const bounds = new maplibregl.LngLatBounds();
             const coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
-            const bounds = new maplibregl.LngLatBounds(); coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 60 });
+            coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 60 });
             mapInstance.on('click', 'fill', () => showDetail());
         });
     }
-    function showDetail() {
-        document.getElementById('parcel-title').innerText = "地番：" + targetData.parcel_number;
-        document.getElementById('photo-list').innerHTML = (targetData.evidence_photo_url || []).map(u => `<div class="photo-item"><img src="${u}"></div>`).join('');
-        document.body.classList.add('mode-split');
-        setTimeout(() => mapInstance.resize(), 300);
+
+    async function finalizeProcess() {
+        toggleLoader(true, "RECORDING ON CHAIN");
+        const sigData = document.getElementById('sig-canvas').toDataURL();
+        const txId = (currentMode === 'trade' ? "TMB-" : "BN-") + Date.now().toString().slice(-6);
+        const updates = currentMode === 'trade' 
+            ? { is_traded: true, trade_price: document.getElementById('trade-price').value, trade_deadline: document.getElementById('trade-deadline').value }
+            : { sig_a_done: true, sig_a_data: sigData, is_agreed: (currentMode === 'agree') };
+        await supabase.from('forest_plots').update(updates).eq('id', targetData.id);
+        
+        const template = document.getElementById('pdf-template');
+        template.innerHTML = `<h1>織杜 ORITO 証明書</h1><p>地番：${targetData.parcel_number}</p><img src="${sigData}" style="width:250px; border-bottom:1px solid #000;">`;
+        await html2pdf().set({ margin: 15, filename: `${txId}.pdf` }).from(template).save();
+
+        setTimeout(() => { alert("刻印完了。証明書を発行しました。"); location.reload(); }, 1500);
     }
-    async function togglePermission() {
-        toggleLoader(true, "UPDATING PERMISSION");
-        const nextStatus = !targetData.admin_visible;
-        await supabase.from('forest_plots').update({ admin_visible: nextStatus }).eq('id', targetData.id);
-        targetData.admin_visible = nextStatus;
-        document.getElementById('stat-perm').innerText = nextStatus ? "公開中" : "非公開";
-        setTimeout(() => toggleLoader(false), 1000);
-    }
+
     function toggleLoader(show, text = "") {
         document.getElementById('progress-text').innerText = text;
         document.getElementById('pdf-progress').style.display = show ? 'flex' : 'none';
@@ -285,7 +275,28 @@
         if (id === 'map-view') setTimeout(initMap, 300);
         if (id === 'sign-view') setTimeout(initCanvas, 300);
     }
+    function renderAdminList(plots) {
+        const container = document.getElementById('permitted-list');
+        const noData = document.getElementById('no-data-msg');
+        container.innerHTML = "";
+        if (!plots || plots.length === 0) { noData.style.display = "block"; return; }
+        noData.style.display = "none";
+        plots.forEach(plot => {
+            const card = document.createElement('div');
+            card.className = "card";
+            card.innerHTML = `<h3>地番：${plot.parcel_number}</h3><button class="btn btn-primary" onclick="openMapAsAdmin('${plot.invitation_code}')">地図を表示</button>`;
+            container.appendChild(card);
+        });
+    }
+    async function openMapAsAdmin(code) {
+        const { data } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
+        targetData = data; changeView('map-view');
+    }
+    function startBoundaryMode() { changeView('map-view'); }
+    function openTimberView() { changeView('timber-view'); }
+    function startFinalFlow(mode) { currentMode = mode; document.getElementById('sign-title').innerText = "最終署名"; changeView('sign-view'); }
     function closeDetail() { document.body.classList.remove('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
+    function showDetail() { document.body.classList.add('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
     function initCanvas() {
         const cvs = document.getElementById('sig-canvas'); cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
         sigCtx = cvs.getContext('2d');
