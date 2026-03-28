@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
-        :root { --green: #00B900; --web3: #8247E5; --dark: #1b4d3e; --gold: #f1c40f; --blue: #007bff; --red: #ff4757; --yellow: #ffd32a; --bg: #f8f9fa; }
+        :root { --green: #00B900; --web3: #8247E5; --dark: #1b4d3e; --gold: #f1c40f; --blue: #007bff; --red: #ff4757; --bg: #f4f7f6; }
         body { margin: 0; font-family: "Hiragino Mincho ProN", serif; background: var(--bg); color: #2d3436; height: 100vh; overflow: hidden; position: fixed; width: 100%; }
         .view { display: none; height: 100vh; flex-direction: column; overflow-y: auto; background: #fff; -webkit-overflow-scrolling: touch; }
         .view.active { display: flex; }
@@ -23,9 +23,9 @@
         .asset-val { font-size: 28px; font-weight: bold; color: #fff; margin: 10px 0; }
         
         .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .scenario-box { padding: 12px; border-radius: 10px; font-size: 11px; color: #fff; line-height: 1.4; }
-        .growth { background: linear-gradient(135deg, #2e7d32, var(--green)); border: 1px solid var(--green); }
-        .risk { background: linear-gradient(135deg, #b71c1c, var(--red)); border: 1px solid var(--red); }
+        .scenario-box { padding: 12px; border-radius: 10px; font-size: 11px; color: #fff; }
+        .growth { background: linear-gradient(135deg, #2e7d32, var(--green)); }
+        .risk { background: linear-gradient(135deg, #b71c1c, var(--red)); }
 
         #map-area { flex: 1; position: relative; width: 100%; min-height: 300px; transition: flex 0.4s ease; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
@@ -35,17 +35,17 @@
 
         .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
         .photo-item { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3; border: 3px solid #eee; transition: 0.2s; }
-        .photo-item.highlight { border-color: var(--blue); transform: scale(1.05); box-shadow: 0 0 15px rgba(0,123,255,0.4); z-index: 10; }
+        .photo-item.highlight { border-color: var(--blue); transform: scale(1.05); box-shadow: 0 0 15px rgba(0,123,255,0.4); }
         .photo-item img { width: 100%; height: 100%; object-fit: cover; }
 
-        .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
         .btn-primary { background: var(--green); color: white; }
         .btn-web3 { background: var(--web3); color: white; }
 
         #pdf-progress { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; }
         .orito-loader { display: flex; gap: 10px; margin-bottom: 20px; }
         .orito-loader span { font-size: 42px; font-weight: 900; color: transparent; -webkit-text-stroke: 1px var(--web3); animation: orito-glow 2s ease-in-out infinite; }
-        @keyframes orito-glow { 0%, 100% { color: transparent; -webkit-text-stroke: 1px #444; transform: translateY(0); } 50% { color: var(--web3); -webkit-text-stroke: 1px var(--web3); transform: translateY(-10px); text-shadow: 0 0 20px var(--web3); } }
+        @keyframes orito-glow { 0%, 100% { color: transparent; -webkit-text-stroke: 1px #444; } 50% { color: var(--web3); -webkit-text-stroke: 1px var(--web3); text-shadow: 0 0 20px var(--web3); } }
         .sig-box { border: 2px dashed #a4b0be; background: #fff; border-radius: 12px; width: 100%; height: 250px; touch-action: none; }
     </style>
 </head>
@@ -58,52 +58,38 @@
 
 <div id="entry-view" class="view active" style="justify-content:center; align-items:center; padding:40px; text-align:center;">
     <h1 style="color:var(--green); font-size:36px; margin:0;">織杜 ORITO</h1>
-    <p style="color:#666; font-size:12px; margin-bottom:40px;">森林境界確定合意リレー</p>
-    <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:24px; letter-spacing:4px; border:2px solid #ddd;" placeholder="CODE001">
-    <button class="btn btn-primary" onclick="handleLogin()">台帳へログイン</button>
-    <button class="btn" style="background:none; color:var(--red); border:1px solid var(--red); font-size:12px; margin-top:50px;" onclick="resetDemoData()">⚠️ デモデータをリセット</button>
+    <p style="color:#666; font-size:12px; margin-bottom:30px;">森林境界確定合意リレー</p>
+    <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:24px; width:100%; padding:15px; border:1px solid #ddd; border-radius:12px;" placeholder="CODE001">
+    <button class="btn btn-primary" onclick="handleLogin()">合意システムへログイン</button>
+    <button class="btn" style="background:none; color:var(--red); border:1px solid var(--red); font-size:12px; margin-top:50px;" onclick="resetDemoData()">⚠️ デモ用リセット</button>
+    <div style="font-size:10px; color:#999; margin-top:20px;">所有者: ORITO001 / 隣接者: ADJ001</div>
 </div>
 
 <div id="dashboard-view" class="view">
     <div class="header">
-        <span id="role-badge" style="font-weight:bold; color:var(--green);">所有者パネル</span>
+        <span id="role-badge" style="font-weight:bold; color:var(--green);">パネル</span>
         <button class="logout-btn" onclick="location.reload()">ログアウト</button>
     </div>
     <div style="padding:20px;">
         <div id="asset-report-area">
             <div class="card" style="background: linear-gradient(135deg, var(--dark), #2e7d32); color:#fff; border:none; padding:25px;">
-                <div style="font-size:12px; opacity:0.8;">現在の推定立木評価額</div>
+                <div style="font-size:12px; opacity:0.8;">現在の推定資産価値</div>
                 <div class="asset-val" id="owner-asset">¥ --,---,---</div>
-                <div style="font-size:10px; color:var(--gold); border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px; margin-bottom:15px;">
-                    ● R8.3.26 宮崎共販平均単価(¥13,350/m3)適用
-                </div>
-                <div style="font-size:11px; font-weight:bold; margin-bottom:10px;">📉 10年後の将来価値予測</div>
+                <div style="font-size:10px; color:var(--gold);">● R8.3.26 宮崎共販平均単価(¥13,350/m3)適用</div>
                 <div class="scenario-grid">
-                    <div class="scenario-box growth"><strong>成長ver.</strong><br><span id="p-growth" style="font-size:14px; font-weight:bold;">¥ --</span><br><small>（材積増・市況安定）</small></div>
-                    <div class="scenario-box risk"><strong>リスクver.</strong><br><span id="p-risk" style="font-size:14px; font-weight:bold;">¥ --</span><br><small>（物流コスト増リスク）</small></div>
+                    <div class="scenario-box growth"><strong>生長予測</strong><br><span id="p-growth">¥ --</span></div>
+                    <div class="scenario-box risk"><strong>物流リスク</strong><br><span id="p-risk">¥ --</span></div>
                 </div>
             </div>
         </div>
 
-        <button class="btn btn-primary" style="background:#fff; border:1px solid var(--green); color:var(--green); text-align:left;" onclick="startBoundaryMode()">
-            📍 <strong>境界確定手続きへ</strong><br><span style="font-size:11px; font-weight:normal;">現地の杭と図面を写真で確認し合意を行います</span>
-        </button>
+        <h3>境界確定手続き</h3>
+        <button class="btn btn-primary" onclick="startBoundaryMode()">📍 境界調査図（写真連動）を確認</button>
 
         <div id="admin-perm-card" class="card" style="margin-top:20px;">
-            <p style="font-size:13px;"><strong>管理者閲覧設定:</strong> <span id="stat-perm" style="font-weight:bold;">OFF</span></p>
-            <button class="btn btn-web3" style="padding:10px; font-size:14px; margin:0;" onclick="togglePermission()">設定を切り替える</button>
+            <p style="font-size:13px;"><strong>管理者閲覧設定:</strong> <span id="stat-perm">OFF</span></p>
+            <button class="btn btn-web3" style="padding:10px; font-size:14px; margin:0;" onclick="togglePermission()">閲覧許可を切り替える</button>
         </div>
-    </div>
-</div>
-
-<div id="admin-view" class="view">
-    <div class="header">
-        <span style="font-weight:bold; color:var(--web3);">管理者パネル</span>
-        <button class="logout-btn" onclick="location.reload()">ログアウト</button>
-    </div>
-    <div style="padding:20px;">
-        <div id="permitted-list"></div>
-        <div id="no-data-msg" class="card" style="text-align:center; color:#999; padding:40px;">許可された森林はありません。</div>
     </div>
 </div>
 
@@ -118,75 +104,74 @@
 </div>
 
 <div id="sign-view" class="view" style="padding:25px; text-align:center;">
-    <h2>境界確定署名</h2>
-    <div class="sig-container" style="background:#f1f2f6; padding:15px; border-radius:15px; margin-bottom:20px;"><canvas id="sig-canvas" class="sig-box"></canvas></div>
-    <button class="btn btn-primary" onclick="finalizeProcess()">確定してブロックチェーン刻印</button>
+    <h2 id="sign-title">最終合意署名</h2>
+    <canvas id="sig-canvas" class="sig-box"></canvas>
+    <button class="btn btn-primary" onclick="finalizeProcess()">確定して刻印</button>
     <button class="btn" onclick="sigCtx.clearRect(0,0,999,999)">書き直し</button>
 </div>
 
 <script>
-    // 変数宣言を完全に1回に制限（二重宣言エラーを解消）
-    const ORITO_FINAL_CONFIG = {
+    // 変数を完全に一本化（重複エラー防止）
+    const APP_CONFIG = {
         SB_URL: "https://ndaxoakqggtctatpanvl.supabase.co",
         SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
         LIFF_ID: "2009625158-euVZJmlu",
-        UNIT_PRICE: 13350, // R8.3.26 宮崎共販平均
+        UNIT_PRICE: 13350, // 令和8年3月26日 宮崎一般材平均単価 
         VOL_PER_HA: 450
     };
 
-    const sbClient = window.supabase.createClient(ORITO_FINAL_CONFIG.SB_URL, ORITO_FINAL_CONFIG.SB_KEY);
+    const sbClient = window.supabase.createClient(APP_CONFIG.SB_URL, APP_CONFIG.SB_KEY);
     let targetData, sigCtx, mapInstance, pointsGeoJSON, userRole = "owner";
 
-    async function init() { try { await liff.init({ liffId: ORITO_FINAL_CONFIG.LIFF_ID }); } catch(e){} }
+    async function init() {
+        try { await liff.init({ liffId: APP_CONFIG.LIFF_ID }); } catch(e) {}
+    }
 
     async function handleLogin() {
         const code = document.getElementById('invite-input').value.trim().toUpperCase();
         if(!code) return;
         toggleLoader(true, "AUTHENTICATING");
 
-        if (code === "ADMIN01") {
-            const { data } = await sbClient.from('forest_plots').select('*').eq('admin_visible', true);
-            renderAdminList(data);
-            setTimeout(() => { toggleLoader(false); changeView('admin-view'); }, 1200);
-        } else {
-            const { data, error } = await sbClient.from('forest_plots').select('*').or(`invitation_code.eq.${code},adj_code.eq.${code}`).single();
-            if (error || !data) { toggleLoader(false); return alert("無効なコードです"); }
+        // OR OR検索で所有者か隣接者かを特定
+        const { data, error } = await sbClient.from('forest_plots').select('*').or(`invitation_code.eq.${code},adj_code.eq.${code}`).single();
+        
+        setTimeout(() => {
+            toggleLoader(false);
+            if (error || !data) return alert("無効なコードです");
             targetData = data;
             userRole = (code === data.invitation_code) ? "owner" : "adjacent";
-            calculateAssetScenarios();
-            setTimeout(() => { toggleLoader(false); changeView('dashboard-view'); }, 1200);
-        }
+            updateDashboardUI();
+            changeView('dashboard-view');
+        }, 1200);
     }
 
-    function calculateAssetScenarios() {
+    function updateDashboardUI() {
         const isOwner = userRole === "owner";
         document.getElementById('role-badge').innerText = isOwner ? "土地所有者（甲）" : "隣接所有者（乙）";
         document.getElementById('asset-report-area').style.display = isOwner ? "block" : "none";
         document.getElementById('admin-perm-card').style.display = isOwner ? "block" : "none";
         
         if (isOwner) {
-            const vol = (targetData.area_ha || 0) * ORITO_FINAL_CONFIG.VOL_PER_HA;
-            const val = vol * ORITO_FINAL_CONFIG.UNIT_PRICE;
+            const vol = (targetData.area_ha || 0) * APP_CONFIG.VOL_PER_HA;
+            const val = vol * APP_CONFIG.UNIT_PRICE;
             document.getElementById('owner-asset').innerText = `¥ ${Math.floor(val).toLocaleString()}`;
-            document.getElementById('p-growth').innerText = `¥ ${Math.floor((vol * 1.2) * (ORITO_FINAL_CONFIG.UNIT_PRICE * 1.05)).toLocaleString()}`;
-            document.getElementById('p-risk').innerText = `¥ ${Math.floor((vol * 1.1) * (ORITO_FINAL_CONFIG.UNIT_PRICE * 0.85)).toLocaleString()}`;
+            document.getElementById('p-growth').innerText = `¥ ${Math.floor((vol * 1.2) * (APP_CONFIG.UNIT_PRICE * 1.05)).toLocaleString()}`;
+            document.getElementById('p-risk').innerText = `¥ ${Math.floor((vol * 1.1) * (APP_CONFIG.UNIT_PRICE * 0.85)).toLocaleString()}`;
             document.getElementById('stat-perm').innerText = targetData.admin_visible ? "公開中" : "非公開";
         }
     }
 
     async function togglePermission() {
-        toggleLoader(true, "UPDATING");
         const next = !targetData.admin_visible;
         await sbClient.from('forest_plots').update({ admin_visible: next }).eq('id', targetData.id);
         targetData.admin_visible = next;
-        document.getElementById('stat-perm').innerText = next ? "公開中" : "非公開";
-        setTimeout(() => toggleLoader(false), 800);
+        updateDashboardUI();
     }
 
     async function resetDemoData() {
         const code = document.getElementById('invite-input').value.trim().toUpperCase();
-        if(!code) return alert("リセットする森林のコードを入力してください");
-        toggleLoader(true, "INITIALIZING");
+        if(!code) return alert("コードを入力してください");
+        toggleLoader(true, "RESETTING");
         await sbClient.from('forest_plots').update({ sig_a_done: false, sig_b_done: false, admin_visible: false }).eq('invitation_code', code);
         location.reload();
     }
@@ -202,7 +187,6 @@
         mapInstance.on('load', async () => {
             const { data } = await sbClient.rpc('get_forest_geojson');
             const filtered = data.features.filter(f => f.properties.invitation_code === targetData.invitation_code);
-            
             mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
             mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.4, 'fill-color': '#00B900' } });
 
@@ -214,9 +198,9 @@
             }));
             pointsGeoJSON = { "type": "FeatureCollection", "features": pts };
             mapInstance.addSource('pts-src', { 'type': 'geojson', 'data': pointsGeoJSON });
-            mapInstance.addLayer({ 'id': 'pts-c', 'type': 'circle', 'source': 'pts-src', 'paint': { 'circle-radius': 16, 'circle-color': '#007bff', 'circle-stroke-width': 3, 'circle-stroke-color': '#fff' } });
+            mapInstance.addLayer({ 'id': 'pts-c', 'type': 'circle', 'source': 'pts-src', 'paint': { 'circle-radius': 15, 'circle-color': '#007bff', 'circle-stroke-width': 3, 'circle-stroke-color': '#fff' } });
             mapInstance.addLayer({ 'id': 'pts-l', 'type': 'symbol', 'source': 'pts-src', 'layout': { 'text-field': ['get', 'idx'], 'text-size': 12 }, 'paint': { 'text-color': '#fff' } });
-
+            
             const bounds = new maplibregl.LngLatBounds(); coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 50 });
             mapInstance.on('click', 'fill', () => showDetail());
             mapInstance.on('click', 'pts-c', (e) => highlightPhoto(e.features[0].properties.idx));
@@ -225,10 +209,9 @@
 
     function showDetail() {
         document.getElementById('parcel-title').innerText = "地番：" + targetData.parcel_number;
-        const photos = getUrls(targetData.evidence_photo_url);
-        document.getElementById('photo-list').innerHTML = photos.map((u, i) => `
+        document.getElementById('photo-list').innerHTML = getUrls(targetData.evidence_photo_url).map((u, i) => `
             <div class="photo-item" id="photo-${i+1}" onclick="focusMarker(${i+1})">
-                <div style="position:absolute; top:5px; left:5px; background:var(--blue); color:#fff; font-size:10px; padding:2px 6px; border-radius:4px; z-index:10;">杭 No.${i+1}</div>
+                <div style="position:absolute; top:5px; left:5px; background:var(--blue); color:#fff; font-size:10px; padding:2px 6px; border-radius:4px;">杭 No.${i+1}</div>
                 <img src="${u}">
             </div>`).join('');
         document.body.classList.add('mode-split');
@@ -244,35 +227,20 @@
         }, 300);
     }
 
-    function focusMarker(idx) {
-        const coord = pointsGeoJSON.features[idx-1].geometry.coordinates;
-        mapInstance.flyTo({ center: coord, zoom: 19 });
-    }
+    function focusMarker(idx) { mapInstance.flyTo({ center: pointsGeoJSON.features[idx-1].geometry.coordinates, zoom: 19 }); }
 
     async function finalizeProcess() {
         toggleLoader(true, "RECORDING ON CHAIN");
-        await new Promise(r => setTimeout(r, 2000));
-        alert("署名が記録されました。");
-        location.reload();
+        const col = (userRole === "owner") ? "sig_a_done" : "sig_b_done";
+        await sbClient.from('forest_plots').update({ [col]: true }).eq('id', targetData.id);
+        setTimeout(() => location.reload(), 2000);
     }
 
-    // --- Helpers ---
     function toggleLoader(show, text="") { document.getElementById('progress-text').innerText = text; document.getElementById('pdf-progress').style.display = show ? 'flex' : 'none'; }
     function changeView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id==='map-view') setTimeout(initMap, 300); if(id==='sign-view') setTimeout(initCanvas, 300); }
     function startBoundaryMode() { changeView('map-view'); }
     function closeDetail() { document.body.classList.remove('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
     function getUrls(d) { if (!d) return []; const m = String(d).match(/https?:\/\/[^\s,"{}]+/g); return m ? m.map(u => u.replace(/[\]\}\s,]+$/, '')) : []; }
-    function renderAdminList(plots) {
-        const container = document.getElementById('permitted-list'); container.innerHTML = "";
-        if(!plots || plots.length === 0) { document.getElementById('no-data-msg').style.display="block"; return; }
-        document.getElementById('no-data-msg').style.display="none";
-        plots.forEach(p => {
-            const card = document.createElement('div'); card.className="card";
-            card.innerHTML = `<h3>地番：${p.parcel_number}</h3><button class="btn btn-primary" onclick="openMapAsAdmin('${p.invitation_code}')" style="padding:10px;">表示</button>`;
-            container.appendChild(card);
-        });
-    }
-    async function openMapAsAdmin(code) { const { data } = await sbClient.from('forest_plots').select('*').eq('invitation_code', code).single(); targetData = data; changeView('map-view'); }
     function initCanvas() {
         const cvs = document.getElementById('sig-canvas'); cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
         sigCtx = cvs.getContext('2d');
@@ -281,6 +249,7 @@
         cvs.onmousemove = cvs.ontouchmove = (e) => { if(e.isDrawing || e.buttons) { const p = getP(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); } e.preventDefault(); };
         window.onmouseup = window.ontouchend = () => sigCtx.closePath();
     }
+
     init();
 </script>
 </body>
