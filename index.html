@@ -40,6 +40,8 @@
         .orito-loader span { font-size: 42px; font-weight: 900; color: transparent; -webkit-text-stroke: 1px var(--web3); animation: orito-glow 2s ease-in-out infinite; }
         @keyframes orito-glow { 0%, 100% { color: transparent; -webkit-text-stroke: 1px #444; } 50% { color: var(--web3); -webkit-text-stroke: 1px var(--web3); text-shadow: 0 0 20px var(--web3); } }
         .sig-box { border: 2px dashed #a4b0be; background: #fff; border-radius: 12px; width: 100%; height: 250px; touch-action: none; }
+        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .photo-item img { width: 100%; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -80,7 +82,7 @@
     </div>
     
     <div class="card" style="background:#fffbe6; font-size:12px; border-color:#ffe58f;">
-        <strong>🌲 AI診断:</strong> 宮崎共販速報(R8.3.26)ではスギ平均単価が13,350円/$m^3$となっており[cite: 2, 13]、中目材に一服感があるものの輸出C材は堅調です。物流コスト増のリスクに備え、早期の境界確定を推奨します。
+        <strong>🌲 AI診断:</strong> 最新の共販データでは平均単価13,350円/$m^3$となっており、輸出材等は堅調に推移しています [cite: 4, 13]。世界情勢による物流コスト高騰リスクを鑑み、早期の資産確定を推奨します。
     </div>
 
     <button class="btn btn-primary" style="background:#fff; border:1px solid var(--green); color:var(--green); text-align:left;" onclick="startBoundaryMode()">
@@ -114,7 +116,7 @@
         <div id="photo-list" class="photo-grid"></div>
         <div style="display:flex; gap:10px;">
             <button class="btn btn-primary" style="flex:1;" onclick="startFinalFlow('agree')">境界に合意</button>
-            <button class="btn btn-danger" style="flex:1; background:var(--red); color:#fff;" onclick="startFinalFlow('disagree')">否認</button>
+            <button class="btn" style="flex:1; background:var(--red); color:#fff;" onclick="startFinalFlow('disagree')">否認</button>
         </div>
         <button class="btn" style="background:#f1f2f6;" onclick="closeDetail()">✕ 戻る</button>
     </div>
@@ -123,7 +125,7 @@
 <div id="timber-view" class="view" style="padding:20px;">
     <h2>立木売買契約入力</h2>
     <div class="card" style="background:#f8f9fa;">
-        <p>市場平均単価: ¥13,350 / m3</p>
+        <p>市場平均単価: ¥13,350 / m3 </p>
         <p>推定材積: <span id="t-volume">--</span> m3</p>
     </div>
     <label>売買代金 (税込)</label>
@@ -131,6 +133,7 @@
     <label>搬出期限</label>
     <input type="date" id="trade-deadline" class="input-field" style="width:100%;">
     <button class="btn btn-web3" onclick="startFinalFlow('trade')">契約署名へ</button>
+    <button class="btn" onclick="changeView('owner-view')">キャンセル</button>
 </div>
 
 <div id="sign-view" class="view" style="padding:25px; text-align:center;">
@@ -144,36 +147,41 @@
 <div id="pdf-template" style="position:fixed; top:0; left:-10000px; width:210mm; background:white; padding:20mm; font-family:serif; line-height:1.8; color:#000;"></div>
 
 <script>
+    // 変数を1箇所に集約（重複エラー防止）
     const CONFIG = {
         SB_URL: "https://ndaxoakqggtctatpanvl.supabase.co",
         SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
         LIFF_ID: "2009625158-euVZJmlu",
-        MARKET_PRICE: 13350, 
-        VOL_COEF: 450        
+        MARKET_PRICE: 13350,
+        VOL_COEF: 450
     };
 
     const supabase = window.supabase.createClient(CONFIG.SB_URL, CONFIG.SB_KEY);
     let targetData, sigCtx, mapInstance, currentMode = "";
 
-    async function init() { try { await liff.init({ liffId: CONFIG.LIFF_ID }); } catch(e){} }
+    async function init() {
+        try { await liff.init({ liffId: CONFIG.LIFF_ID }); } catch(e){}
+    }
 
     async function handleLogin() {
         const code = document.getElementById('invite-input').value.trim().toUpperCase();
         toggleLoader(true, "AUTHENTICATING");
 
-        if (code === "ADMIN01") {
-            const { data } = await supabase.from('forest_plots').select('*').eq('admin_visible', true);
-            setTimeout(() => { toggleLoader(false); renderAdminList(data); changeView('admin-view'); }, 1200);
-        } else {
-            const { data, error } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
-            setTimeout(() => {
-                toggleLoader(false);
-                if (error || !data) return alert("無効なコードです");
+        try {
+            if (code === "ADMIN01") {
+                const { data } = await supabase.from('forest_plots').select('*').eq('admin_visible', true);
+                setTimeout(() => { toggleLoader(false); renderAdminList(data); changeView('admin-view'); }, 1200);
+            } else {
+                const { data, error } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
+                if (error || !data) throw new Error("無効なコードです");
                 targetData = data;
                 calculateAssetScenarios();
                 updateDashboardUI();
-                changeView('owner-view');
-            }, 1200);
+                setTimeout(() => { toggleLoader(false); changeView('owner-view'); }, 1200);
+            }
+        } catch (e) {
+            toggleLoader(false);
+            alert(e.message);
         }
     }
 
@@ -195,31 +203,6 @@
         document.getElementById('stat-perm').style.color = targetData.admin_visible ? "var(--green)" : "var(--red)";
     }
 
-    // --- デモ用初期化関数 ---
-    async function resetDemoData() {
-        if(!confirm("デモ用にこの森林のステータスをすべてリセットしますか？")) return;
-        toggleLoader(true, "INITIALIZING DEMO DATA");
-        
-        const { error } = await supabase.from('forest_plots').update({
-            sig_a_done: false,
-            sig_a_data: null,
-            admin_visible: false,
-            is_agreed: false,
-            is_traded: false,
-            trade_price: null,
-            trade_deadline: null
-        }).eq('id', targetData.id);
-
-        setTimeout(() => {
-            toggleLoader(false);
-            if (error) alert("初期化失敗: " + error.message);
-            else {
-                alert("初期化完了。デモを再開できます。");
-                location.reload();
-            }
-        }, 2000);
-    }
-
     async function togglePermission() {
         toggleLoader(true, "UPDATING");
         const nextStatus = !targetData.admin_visible;
@@ -229,7 +212,13 @@
         setTimeout(() => toggleLoader(false), 800);
     }
 
-    // --- マップ・署名・PDF生成 (既存ロジック継承) ---
+    async function resetDemoData() {
+        if(!confirm("ステータスを初期化しますか？")) return;
+        toggleLoader(true, "INITIALIZING");
+        await supabase.from('forest_plots').update({ sig_a_done: false, admin_visible: false, is_traded: false }).eq('id', targetData.id);
+        setTimeout(() => location.reload(), 1500);
+    }
+
     function initMap() {
         if (mapInstance) return;
         mapInstance = new maplibregl.Map({
@@ -242,27 +231,23 @@
             const filtered = data.features.filter(f => f.properties.invitation_code === targetData.invitation_code);
             mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
             mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.3, 'fill-color': '#00B900' } });
-            const bounds = new maplibregl.LngLatBounds();
             const coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
-            coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 60 });
+            const bounds = new maplibregl.LngLatBounds(); coords.forEach(c => bounds.extend(c)); mapInstance.fitBounds(bounds, { padding: 60 });
             mapInstance.on('click', 'fill', () => showDetail());
         });
     }
 
     async function finalizeProcess() {
-        toggleLoader(true, "RECORDING ON CHAIN");
+        toggleLoader(true, "RECORDING");
         const sigData = document.getElementById('sig-canvas').toDataURL();
         const txId = (currentMode === 'trade' ? "TMB-" : "BN-") + Date.now().toString().slice(-6);
-        const updates = currentMode === 'trade' 
-            ? { is_traded: true, trade_price: document.getElementById('trade-price').value, trade_deadline: document.getElementById('trade-deadline').value }
-            : { sig_a_done: true, sig_a_data: sigData, is_agreed: (currentMode === 'agree') };
-        await supabase.from('forest_plots').update(updates).eq('id', targetData.id);
+        await supabase.from('forest_plots').update({ sig_a_done: true, sig_a_data: sigData }).eq('id', targetData.id);
         
         const template = document.getElementById('pdf-template');
-        template.innerHTML = `<h1>織杜 ORITO 証明書</h1><p>地番：${targetData.parcel_number}</p><img src="${sigData}" style="width:250px; border-bottom:1px solid #000;">`;
-        await html2pdf().set({ margin: 15, filename: `${txId}.pdf` }).from(template).save();
+        template.innerHTML = `<h1>織杜 ORITO 証明書</h1><p>管理番号: ${txId}</p><p>地番：${targetData.parcel_number}</p><img src="${sigData}" style="width:250px;">`;
+        await html2pdf().from(template).save(`${txId}.pdf`);
 
-        setTimeout(() => { alert("刻印完了。証明書を発行しました。"); location.reload(); }, 1500);
+        setTimeout(() => location.reload(), 1500);
     }
 
     function toggleLoader(show, text = "") {
@@ -277,10 +262,9 @@
     }
     function renderAdminList(plots) {
         const container = document.getElementById('permitted-list');
-        const noData = document.getElementById('no-data-msg');
         container.innerHTML = "";
-        if (!plots || plots.length === 0) { noData.style.display = "block"; return; }
-        noData.style.display = "none";
+        if (!plots || plots.length === 0) return;
+        document.getElementById('no-data-msg').style.display = "none";
         plots.forEach(plot => {
             const card = document.createElement('div');
             card.className = "card";
@@ -294,7 +278,7 @@
     }
     function startBoundaryMode() { changeView('map-view'); }
     function openTimberView() { changeView('timber-view'); }
-    function startFinalFlow(mode) { currentMode = mode; document.getElementById('sign-title').innerText = "最終署名"; changeView('sign-view'); }
+    function startFinalFlow(mode) { currentMode = mode; document.getElementById('sign-title').innerText = "署名確定"; changeView('sign-view'); }
     function closeDetail() { document.body.classList.remove('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
     function showDetail() { document.body.classList.add('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
     function initCanvas() {
