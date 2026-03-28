@@ -16,38 +16,40 @@
         .view { display: none; height: 100vh; flex-direction: column; overflow-y: auto; background: #fff; -webkit-overflow-scrolling: touch; }
         .view.active { display: flex; }
         
-        /* Dashboard Card */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #fff; border-bottom: 1px solid #eee; }
+        .logout-btn { font-size: 11px; color: #999; border: 1px solid #ddd; padding: 4px 10px; border-radius: 4px; background: none; }
+
         .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; }
-        .asset-val { font-size: 28px; font-weight: bold; color: #fff; margin: 10px 0; }
+        .asset-val { font-size: 26px; font-weight: bold; color: #fff; margin: 10px 0; }
         .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
         .scenario-box { padding: 12px; border-radius: 10px; font-size: 11px; color: #fff; line-height: 1.4; }
-        .growth { background: linear-gradient(135deg, #2e7d32, var(--green)); border: 1px solid var(--green); }
-        .risk { background: linear-gradient(135deg, #b71c1c, var(--red)); border: 1px solid var(--red); }
+        .growth { background: linear-gradient(135deg, #2e7d32, var(--green)); }
+        .risk { background: linear-gradient(135deg, #b71c1c, var(--red)); }
 
-        /* Map UI */
         #map-area { flex: 1; position: relative; width: 100%; min-height: 300px; transition: flex 0.4s ease; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
         #detail-area { background: #fff; border-top: 5px solid var(--green); display: none; padding: 20px; height: 60vh; border-radius: 24px 24px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); overflow-y: auto; z-index: 100; }
         body.mode-split #detail-area { display: block; }
         body.mode-split #map-area { flex: 0.35; }
 
-        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        .photo-item { border-radius: 10px; overflow: hidden; border: 2px solid #eee; aspect-ratio: 4/3; }
-        .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+        .chat-box { height: 180px; overflow-y: auto; border: 1px solid #eee; border-radius: 12px; padding: 10px; background: #fafafa; margin-bottom: 10px; font-size: 12px; }
+        .msg { margin-bottom: 8px; padding: 8px 12px; border-radius: 12px; max-width: 85%; line-height: 1.4; }
+        .msg.owner { background: var(--green); color: #fff; margin-left: auto; }
+        .msg.admin { background: #eee; color: #333; }
 
         .btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; text-align: center; }
         .btn-primary { background: var(--green); color: white; }
         .btn-web3 { background: var(--web3); color: white; }
         
-        #pdf-progress { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; }
         #sig-canvas { border: 2px dashed #ccc; background: #fff; border-radius: 12px; width: 100%; height: 250px; touch-action: none; }
+        #pdf-progress { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; }
     </style>
 </head>
 <body>
 
 <div id="pdf-progress">
-    <div style="font-size:42px; font-weight:900; color:var(--web3); margin-bottom:20px;">O R I T O</div>
-    <p id="progress-text" style="color:#fff; font-weight:bold; letter-spacing:4px;">PROCESSSING</p>
+    <div style="font-size:32px; font-weight:900; color:var(--web3); margin-bottom:20px;">O R I T O</div>
+    <p id="progress-text" style="color:#fff; font-weight:bold; letter-spacing:4px;">VERIFYING CONSENT</p>
 </div>
 
 <div id="entry-view" class="view active" style="justify-content:center; align-items:center; padding:40px; text-align:center;">
@@ -55,17 +57,20 @@
     <p style="color:#666; font-size:12px; margin-bottom:40px;">森林境界確定・資産管理</p>
     <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:24px; width:100%; padding:15px; border:1px solid #ddd; border-radius:12px;" placeholder="CODE001">
     <button class="btn btn-primary" onclick="handleLogin()">マイページへログイン</button>
-    <button class="btn" style="background:none; color:var(--red); border:1px solid var(--red); font-size:11px; margin-top:50px;" onclick="resetDemoData()">⚠️ デモデータをリセット</button>
+    <button class="btn" style="background:none; color:var(--red); border:1px solid var(--red); font-size:11px; margin-top:50px;" onclick="resetDemoData()">デモ用リセット</button>
 </div>
 
-<div id="dashboard-view" class="view" style="padding:20px;">
-    <h2><span id="role-label">所有者</span>レポート</h2>
+<div id="owner-view" class="view" style="padding:20px;">
+    <div class="header" style="padding:0; border:none; margin-bottom:15px;">
+        <h2 style="margin:0;">森林資産レポート</h2>
+        <button class="logout-btn" onclick="location.reload()">ログアウト</button>
+    </div>
     
-    <div id="asset-section">
+    <div id="asset-display">
         <div class="card" style="background: linear-gradient(135deg, var(--dark), #2e7d32); color:#fff; border:none; padding:25px;">
             <div style="font-size:11px; opacity:0.8;">現在の推定資産価値</div>
             <div class="asset-val" id="owner-asset">¥ --,---,---</div>
-            <div style="font-size:10px; color:var(--gold); border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px; margin-bottom:15px;">
+            <div style="font-size:10px; color:var(--gold); padding-bottom:10px; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.2);">
                 ● R8.3.26 宮崎共販平均単価(¥13,350/m3)適用
             </div>
             <div style="font-size:11px; font-weight:bold; margin-bottom:10px;">📉 10年後の将来価値予測</div>
@@ -79,18 +84,18 @@
     <button class="btn btn-primary" onclick="startBoundaryMode()">📍 境界確定手続きへ</button>
 
     <div class="card" id="perm-card" style="margin-top:20px;">
-        <p style="font-size:12px;"><strong>管理者（自治体・森林組合）への公開:</strong> <span id="stat-perm" style="font-weight:bold;">OFF</span></p>
+        <p style="font-size:12px;"><strong>管理者への公開設定:</strong> <span id="stat-perm" style="font-weight:bold;">OFF</span></p>
         <button class="btn btn-web3" style="padding:10px; font-size:13px;" onclick="togglePermission()">設定を切り替える</button>
     </div>
-
-    <button class="btn" style="background:#eee; color:#666; font-size:12px;" onclick="location.reload()">ログアウト</button>
 </div>
 
 <div id="admin-view" class="view" style="padding:20px;">
-    <h2>管理者パネル</h2>
+    <div class="header" style="padding:0; border:none; margin-bottom:15px;">
+        <h2 style="margin:0;">管理者パネル</h2>
+        <button class="logout-btn" onclick="location.reload()">ログアウト</button>
+    </div>
     <div id="permitted-list"></div>
-    <div id="no-data-msg" class="card" style="text-align:center; color:#999; padding:40px;">公開を許可された森林はありません。</div>
-    <button class="btn" style="background:#eee;" onclick="location.reload()">ログアウト</button>
+    <div id="no-data-msg" class="card" style="text-align:center; color:#999; padding:40px;">公開許可された森林はありません。</div>
 </div>
 
 <div id="map-view" class="view">
@@ -99,40 +104,60 @@
         <h3 id="parcel-title">物件詳細</h3>
         <div id="photo-list" class="photo-grid"></div>
         
-        <div id="action-btn-group" style="display:none;">
+        <div id="user-action-group" style="display:none;">
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-primary" style="flex:1;" onclick="changeView('sign-view')">境界に合意</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="changeView('ekyc-view')">境界に合意</button>
                 <button class="btn" style="flex:1; background:var(--red); color:#fff;" onclick="denyBoundary()">否認</button>
+            </div>
+        </div>
+
+        <div id="admin-chat-group" style="display:none; border-top:1px solid #eee; padding-top:15px; margin-top:10px;">
+            <h4>所有者との対話</h4>
+            <div id="chat-box" class="chat-box"></div>
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="chat-input" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px;" placeholder="メッセージを入力">
+                <button class="btn btn-web3" style="width:70px; margin:0; padding:0; font-size:12px;" onclick="sendMessage()">送信</button>
             </div>
         </div>
         <button class="btn" style="background:#f1f2f6;" onclick="closeDetail()">✕ 戻る</button>
     </div>
 </div>
 
+<div id="ekyc-view" class="view" style="padding:30px; text-align:center;">
+    <h2>本人確認 (eKYC)</h2>
+    <p style="font-size:12px; color:#666; margin-bottom:30px;">署名の前に、身分証明書を撮影してください。</p>
+    <div style="width:100%; aspect-ratio:3/2; background:#eee; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:20px;">
+        📷 カメラを起動中...
+    </div>
+    <button class="btn btn-primary" onclick="changeView('sign-view')">撮影を完了して署名へ</button>
+</div>
+
 <div id="sign-view" class="view" style="padding:30px; text-align:center;">
     <h2>境界確定署名</h2>
     <canvas id="sig-canvas"></canvas>
     <button class="btn btn-primary" onclick="finalizeProcess()">確定して刻印</button>
-    <button class="btn" style="background:#eee;" onclick="sigCtx.clearRect(0,0,999,999)">書き直し</button>
+    <button class="btn" style="background:#eee;" onclick="clearSignature()">書き直し</button>
 </div>
 
+<div id="pdf-template" style="position:fixed; top:0; left:-10000px; width:210mm; background:white; padding:20mm; font-family:serif;"></div>
+
 <script>
-    const CONFIG = {
+    const APP_ORITO = {
         SB_URL: "https://ndaxoakqggtctatpanvl.supabase.co",
         SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYXhvYWtxZ2d0Y3RhdHBhbnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2Mjc4NzAsImV4cCI6MjA5MDIwMzg3MH0.5cr38JDtnSzdiE3zcaCAUBbxB_K1Df2XiXRqxp8y__c",
         LIFF_ID: "2009625158-euVZJmlu",
-        UNIT_PRICE: 13350
+        TIMBER_PRICE: 13350 // R8.3.26 宮崎共販平均 
     };
 
-    const sb = window.supabase.createClient(CONFIG.SB_URL, CONFIG.SB_KEY);
+    const sb = window.supabase.createClient(APP_ORITO.SB_URL, APP_ORITO.TIMBER_PRICE ? APP_ORITO.SB_KEY : ""); 
     let targetData, sigCtx, mapInstance, userRole = "owner";
 
-    async function init() { try { await liff.init({ liffId: CONFIG.LIFF_ID }); } catch(e){} }
+    async function init() { try { await liff.init({ liffId: APP_ORITO.LIFF_ID }); } catch(e){} }
 
     async function handleLogin() {
         const code = document.getElementById('invite-input').value.trim().toUpperCase();
         if(!code) return;
-        toggleLoader(true, "AUTHENTICATING");
+        toggleLoader(true, "CONNECTING");
 
         if (code === "ADMIN01") {
             userRole = "admin";
@@ -143,31 +168,18 @@
             if (error || !data) { toggleLoader(false); return alert("無効なコードです"); }
             targetData = data;
             userRole = (code === data.invitation_code) ? "owner" : "adjacent";
-            calculateScenarios();
-            toggleLoader(false); changeView('dashboard-view');
+            calculateAssets();
+            toggleLoader(false); changeView('owner-view');
         }
     }
 
-    function calculateScenarios() {
-        const isOwner = userRole === "owner";
-        document.getElementById('role-label').innerText = isOwner ? "所有者" : "隣接者";
-        document.getElementById('asset-section').style.display = isOwner ? "block" : "none";
-        document.getElementById('perm-card').style.display = isOwner ? "block" : "none";
-        
-        if (isOwner) {
-            const vol = (targetData.area_ha || 0) * 450;
-            const currentVal = vol * CONFIG.UNIT_PRICE;
-            document.getElementById('owner-asset').innerText = `¥ ${Math.floor(currentVal).toLocaleString()}`;
-            document.getElementById('p-growth').innerText = `¥ ${Math.floor((vol * 1.2) * (CONFIG.UNIT_PRICE * 1.05)).toLocaleString()}`;
-            document.getElementById('p-risk').innerText = `¥ ${Math.floor((vol * 1.1) * (CONFIG.UNIT_PRICE * 0.85)).toLocaleString()}`;
-            document.getElementById('stat-perm').innerText = targetData.admin_visible ? "ON" : "OFF";
-        }
-    }
-
-    async function togglePermission() {
-        const next = !targetData.admin_visible;
-        await sb.from('forest_plots').update({ admin_visible: next }).eq('id', targetData.id);
-        targetData.admin_visible = next; calculateScenarios();
+    function calculateAssets() {
+        const vol = (targetData.area_ha || 0) * 450;
+        const currentVal = vol * APP_ORITO.TIMBER_PRICE;
+        document.getElementById('owner-asset').innerText = `¥ ${Math.floor(currentVal).toLocaleString()}`;
+        document.getElementById('p-growth').innerText = `¥ ${Math.floor((vol * 1.2) * (APP_ORITO.TIMBER_PRICE * 1.05)).toLocaleString()}`;
+        document.getElementById('p-risk').innerText = `¥ ${Math.floor((vol * 1.1) * (APP_ORITO.TIMBER_PRICE * 0.85)).toLocaleString()}`;
+        document.getElementById('stat-perm').innerText = targetData.admin_visible ? "ON" : "OFF";
     }
 
     function initMap() {
@@ -203,39 +215,73 @@
 
     function showDetail() {
         document.getElementById('parcel-title').innerText = "地番：" + targetData.parcel_number;
-        document.getElementById('action-btn-group').style.display = (userRole !== "admin") ? "block" : "none";
+        document.getElementById('user-action-group').style.display = (userRole !== "admin") ? "block" : "none";
+        document.getElementById('admin-chat-group').style.display = (userRole === "admin") ? "block" : "none";
         
-        // 写真表示ロジックの復旧
         const photos = getUrls(targetData.evidence_photo_url);
-        document.getElementById('photo-list').innerHTML = photos.map(u => `<div class="photo-item"><img src="${u}"></div>`).join('');
+        document.getElementById('photo-list').innerHTML = photos.map(u => `<div style="border-radius:10px; overflow:hidden; aspect-ratio:4/3;"><img src="${u}" style="width:100%;height:100%;object-fit:cover;"></div>`).join('');
         
+        if(userRole === "admin") loadMessages();
         document.body.classList.add('mode-split');
         setTimeout(() => mapInstance.resize(), 300);
     }
 
+    // --- 署名 & PDF & チャット送信ロジック ---
     async function finalizeProcess() {
-        toggleLoader(true, "RECORDING");
+        toggleLoader(true, "FINALIZING AGREEMENT");
+        const sigImg = document.getElementById('sig-canvas').toDataURL();
         const col = (userRole === "owner") ? "sig_a_done" : "sig_b_done";
-        await sb.from('forest_plots').update({ [col]: true, is_denied: false }).eq('id', targetData.id);
         
-        if (liff.isInClient()) {
-            await liff.sendMessages([{ type: 'text', text: `🌲境界合意が完了しました（地番:${targetData.parcel_number}）` }]);
+        // 1. DB更新
+        const { data } = await sb.from('forest_plots').update({ [col]: true, is_denied: false }).eq('id', targetData.id).select().single();
+        
+        // 2. 両者の合意が揃ったか判定
+        if (data.sig_a_done && data.sig_b_done) {
+            // PDF生成
+            const template = document.getElementById('pdf-template');
+            template.innerHTML = `<h1>境界確定証明書</h1><p>地番：${targetData.parcel_number}</p><p>本証明書は甲乙双方の合意に基づきブロックチェーンに刻印されました。</p>`;
+            await html2pdf().from(template).save(`Final_Agreement_${targetData.parcel_number}.pdf`);
+            
+            // チャットへPDF送信（シミュレーション通知）
+            if (liff.isInClient()) {
+                await liff.sendMessages([{ type: 'text', text: `🌲織杜 ORITO\n境界確定が完了しました！\n証明書(PDF)を発行し、台帳へ記録しました。\n地番：${targetData.parcel_number}` }]);
+            }
+        } else {
+            alert("あなたの署名を記録しました。隣接者の合意を待ちます。");
         }
-        setTimeout(() => location.reload(), 2000);
-    }
-
-    async function denyBoundary() {
-        if(!confirm("否認しますか？")) return;
-        await sb.from('forest_plots').update({ is_denied: true }).eq('id', targetData.id);
+        
         location.reload();
     }
 
-    async function resetDemoData() {
-        const code = document.getElementById('invite-input').value.trim().toUpperCase();
-        await sb.from('forest_plots').update({ sig_a_done: false, sig_b_done: false, is_denied: false, admin_visible: false }).eq('invitation_code', code);
-        location.reload();
+    // --- チャットロジック ---
+    async function sendMessage() {
+        const inp = document.getElementById('chat-input');
+        if(!inp.value) return;
+        await sb.from('forest_messages').insert([{ plot_id: targetData.id, sender_role: 'admin', message: inp.value }]);
+        inp.value = ""; loadMessages();
+    }
+    async function loadMessages() {
+        const { data } = await sb.from('forest_messages').select('*').eq('plot_id', targetData.id).order('created_at', { ascending: true });
+        const box = document.getElementById('chat-box');
+        if(box) { box.innerHTML = data.map(m => `<div class="msg ${m.sender_role==='admin'?'admin':'owner'}">${m.message}</div>`).join(''); box.scrollTop = box.scrollHeight; }
     }
 
+    // --- UI/UX Helpers ---
+    function initCanvas() {
+        const cvs = document.getElementById('sig-canvas');
+        cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
+        sigCtx = cvs.getContext('2d'); sigCtx.lineWidth = 3; sigCtx.lineCap = "round";
+        const getP = (e) => { const r = cvs.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; };
+        cvs.addEventListener('touchstart', (e) => { e.preventDefault(); cvs.drawing=true; sigCtx.beginPath(); const p=getP(e); sigCtx.moveTo(p.x,p.y); }, {passive:false});
+        cvs.addEventListener('touchmove', (e) => { if(!cvs.drawing)return; e.preventDefault(); const p=getP(e); sigCtx.lineTo(p.x,p.y); sigCtx.stroke(); }, {passive:false});
+        cvs.addEventListener('touchend', () => cvs.drawing=false);
+    }
+    function togglePermission() { sb.from('forest_plots').update({ admin_visible: !targetData.admin_visible }).eq('id', targetData.id).then(() => location.reload()); }
+    function resetDemoData() { const c = document.getElementById('invite-input').value; sb.from('forest_plots').update({ sig_a_done: false, sig_b_done: false, is_denied: false, admin_visible: false }).eq('invitation_code', c).then(() => location.reload()); }
+    function toggleLoader(show, text="") { document.getElementById('progress-text').innerText = text; document.getElementById('pdf-progress').style.display = show ? 'flex' : 'none'; }
+    function changeView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id==='map-view') setTimeout(initMap, 300); if(id==='sign-view') setTimeout(initCanvas, 300); }
+    function startBoundaryMode() { changeView('map-view'); }
+    function closeDetail() { document.body.classList.remove('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
     function getUrls(d) { if (!d) return []; const m = String(d).match(/https?:\/\/[^\s,"{}]+/g); return m ? m.map(u => u.replace(/[\]\}\s,]+$/, '')) : []; }
     function renderAdminList(plots) {
         const container = document.getElementById('permitted-list'); container.innerHTML = "";
@@ -243,26 +289,12 @@
         document.getElementById('no-data-msg').style.display="none";
         plots.forEach(p => {
             const card = document.createElement('div'); card.className="card";
-            card.innerHTML = `<h3>地番：${p.parcel_number}</h3><button class="btn btn-primary" onclick="openMapAsAdmin('${p.invitation_code}')" style="padding:10px;">表示</button>`;
+            card.innerHTML = `<h3>地番：${p.parcel_number}</h3><button class="btn btn-primary" onclick="openMapAsAdmin('${p.invitation_code}')">表示</button>`;
             container.appendChild(card);
         });
     }
     async function openMapAsAdmin(code) { const { data } = await sb.from('forest_plots').select('*').eq('invitation_code', code).single(); targetData = data; changeView('map-view'); }
-    function initCanvas() {
-        const cvs = document.getElementById('sig-canvas'); cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
-        sigCtx = cvs.getContext('2d');
-        const getP = (e) => { const r = cvs.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; };
-        const draw = (e) => { if(!cvs.drawing) return; e.preventDefault(); const p = getP(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); };
-        cvs.addEventListener('touchstart', (e) => { e.preventDefault(); cvs.drawing=true; sigCtx.beginPath(); const p=getP(e); sigCtx.moveTo(p.x,p.y); }, {passive:false});
-        cvs.addEventListener('touchmove', draw, {passive:false});
-        cvs.addEventListener('touchend', () => cvs.drawing=false);
-        sigCtx.lineWidth = 3; sigCtx.lineCap = "round";
-    }
-    function toggleLoader(show, text="") { document.getElementById('progress-text').innerText = text; document.getElementById('pdf-progress').style.display = show ? 'flex' : 'none'; }
-    function changeView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id==='map-view') setTimeout(initMap, 300); if(id==='sign-view') setTimeout(initCanvas, 300); }
-    function startBoundaryMode() { changeView('map-view'); }
-    function closeDetail() { document.body.classList.remove('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
-    
+    function clearSignature() { sigCtx.clearRect(0,0,999,999); }
     init();
 </script>
 </body>
