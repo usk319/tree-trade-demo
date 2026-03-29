@@ -17,27 +17,29 @@
         .view { display: none; height: 100vh; flex-direction: column; overflow-y: auto; background: #fff; }
         .view.active { display: flex !important; } 
         
-        /* UIパーツ */
         .mode-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-bottom: 10px; color: #fff; }
         .input-field { width: 100%; padding: 16px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 12px; font-size: 16px; box-sizing: border-box; }
         .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.2s; }
-        .btn:active { opacity: 0.6; }
         .btn-primary { background: var(--green); color: white; }
         .btn-web3 { background: var(--web3); color: white; }
 
-        /* レイアウト */
         #map-area { flex: 1; position: relative; width: 100%; min-height: 40vh; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
         #detail-area { background: #fff; border-top: 5px solid var(--green); display: none; padding: 20px; overflow-y: auto; height: 60vh; border-radius: 20px 20px 0 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); }
         body.mode-split #detail-area { display: block; }
         body.mode-split #map-area { flex: 0.4; }
 
-        /* 署名・ローディング */
+        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
+        .photo-item { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3; border: 2px solid #eee; }
+        .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+
         .sig-container { background: #f1f2f6; padding: 15px; border-radius: 15px; margin-bottom: 10px; }
         .sig-box { border: 2px dashed #a4b0be; background: #fff; border-radius: 10px; touch-action: none; width: 100%; height: 180px; }
+
         #pdf-progress { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 10000; flex-direction: column; color: #fff; text-align: center; }
         .loader { width: 50px; height: 50px; border: 5px solid var(--web3); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        #status-text { font-size: 14px; color: #aaa; margin-top: 15px; font-family: monospace; }
     </style>
 </head>
 <body>
@@ -64,7 +66,7 @@
         <h2 style="margin-bottom:30px;">招待コードを入力</h2>
         <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:26px; letter-spacing:6px;" placeholder="ORITO001">
         <button class="btn btn-primary" id="entry-next-btn" onclick="verifyCode()">調査台帳を照会</button>
-        <button class="btn" style="background:#f1f2f6; margin-top:20px;" onclick="location.reload()">戻る</button>
+        <button class="btn" style="background:#f1f2f6; margin-top:20px;" onclick="location.reload()">最初に戻る</button>
     </div>
 </div>
 
@@ -79,7 +81,8 @@
     <div id="map-area"><div id="map"></div></div>
     <div id="detail-area">
         <h3 id="parcel-title">物件情報</h3>
-        <div id="photo-list" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;"></div>
+        <p id="parcel-info" style="font-size:14px; color:#666; margin-bottom:15px;"></p>
+        <div id="photo-list" class="photo-grid"></div>
         <button class="btn btn-primary" onclick="changeView('agree-view')">署名ステップへ</button>
         <button class="btn" style="background:#f8f9fa;" onclick="closeDetail()">✕ 閉じる</button>
     </div>
@@ -87,10 +90,14 @@
 
 <div id="timber-view" class="view" style="padding:30px;">
     <div class="mode-tag" style="background:var(--web3);">立木売買</div>
-    <h2>契約条件の確認</h2>
-    <input type="number" id="trade-price" class="input-field" placeholder="売買金額を入力">
+    <h2>売買条件の確認</h2>
+    <div style="background:#f8f9fa; padding:15px; border-radius:12px; margin-bottom:20px; font-size:14px;">
+        <p>対象地番：<span id="t-parcel"></span></p>
+        <p>面積：<span id="t-area"></span> ha</p>
+    </div>
+    <input type="number" id="trade-price" class="input-field" placeholder="金額を入力">
     <input type="date" id="logging-deadline" class="input-field">
-    <button class="btn btn-web3" onclick="changeView('agree-view')">契約署名へ進む</button>
+    <button class="btn btn-web3" onclick="changeView('agree-view')">契約署名へ</button>
 </div>
 
 <div id="agree-view" class="view" style="padding:30px;">
@@ -99,20 +106,24 @@
         <canvas id="sig-canvas" class="sig-box"></canvas>
     </div>
     <button class="btn btn-primary" id="final-btn" onclick="finalizeProcess()">確定して保存</button>
-    <button class="btn" style="background:#f1f2f6;" onclick="clearSig()">消去</button>
+    <button class="btn" style="background:#f1f2f6;" onclick="clearSig()">書き直し</button>
 </div>
 
 <div id="pdf-overlay" style="position:fixed; top:0; left:-20000px; width:210mm;"><div id="pdf-template"></div></div>
 
 <script>
-    // --- 1. 定数の宣言 (ここを一度だけに修正！) ---
+    // --- 1. 定数の宣言 (ここで一度だけ宣言) ---
     const S_URL = 'https://uggpclqqyaailuadgzxv.supabase.co';
     const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnZ3BjbHFxeWFhaWx1YWRnenh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MzE0NTgsImV4cCI6MjA5MDEwNzQ1OH0.jY5jJuJUgwbIZm8y-jJvEH27eAP9m9semR3MbLxVxGo';
     const supabase = window.supabase.createClient(S_URL, S_KEY);
 
-    let targetData = null, mapInstance = null, sigCtx = null, currentMode = 'boundary', isOwner = true;
+    let targetData = null;
+    let mapInstance = null;
+    let sigCtx = null;
+    let currentMode = 'boundary';
+    let isOwner = true;
 
-    // --- 2. 関数定義 ---
+    // --- 2. 関数定義 (selectMode等を先に定義してエラーを回避) ---
     function selectMode(mode) {
         currentMode = mode;
         const tag = document.getElementById('entry-tag');
@@ -135,19 +146,26 @@
 
     async function verifyCode() {
         const code = document.getElementById('invite-input').value.toUpperCase().trim();
-        const { data } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
-        if (!data) return alert("無効なコードです。");
+        if(!code) return alert("コードを入力してください");
+
+        const { data, error } = await supabase.from('forest_plots').select('*').eq('invitation_code', code).single();
+        if (!data) return alert("無効な招待コードです。");
+
         targetData = data;
         if (currentMode === 'timber') {
+            document.getElementById('t-parcel').innerText = data.parcel_number;
+            document.getElementById('t-area').innerText = data.area_ha;
+            document.getElementById('final-btn').style.background = 'var(--web3)';
             changeView('timber-view');
         } else {
             isOwner = !data.sig_a_done;
-            document.getElementById('role-label').innerText = isOwner ? "土地所有者（甲）" : "隣接土地所有者（乙）";
+            document.getElementById('role-label').innerText = isOwner ? "役割：土地所有者（甲）" : "役割：隣接土地所有者（乙）";
+            document.getElementById('current-address').value = isOwner ? (data.owner_address || "") : (data.adjacent_address || "");
             changeView('kyc-view');
         }
     }
 
-    // 地図・署名の初期化ロジック (略さず保持)
+    // 地図初期化
     function initMap() {
         if (mapInstance) return;
         mapInstance = new maplibregl.Map({
@@ -166,42 +184,65 @@
                 coords.forEach(c => bounds.extend(c));
                 mapInstance.fitBounds(bounds, { padding: 50 });
             }
+            mapInstance.on('click', 'fill', () => showDetail());
         });
     }
+
+    function showDetail() {
+        document.getElementById('parcel-title').innerText = targetData.parcel_number;
+        document.getElementById('parcel-info').innerText = `${targetData.area_ha}ha / ${targetData.tree_species}`;
+        const urls = getUrls(targetData.evidence_photo_url);
+        document.getElementById('photo-list').innerHTML = urls.map(u => `<div class="photo-item"><img src="${u}"></div>`).join('');
+        document.body.classList.add('mode-split');
+        setTimeout(() => mapInstance.resize(), 300);
+    }
+
+    function closeDetail() { document.body.classList.remove('mode-split'); setTimeout(() => mapInstance.resize(), 300); }
 
     function initCanvas() {
         const cvs = document.getElementById('sig-canvas');
         cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
         sigCtx = cvs.getContext('2d');
         let drawing = false;
-        const getP = (e) => { const r = cvs.getBoundingClientRect(); return { x: (e.touches ? e.touches[0].clientX : e.clientX) - r.left, y: (e.touches ? e.touches[0].clientY : e.clientY) - r.top }; };
+        const getP = (e) => { const r = cvs.getBoundingClientRect(); const cx = e.touches ? e.touches[0].clientX : e.clientX; const cy = e.touches ? e.touches[0].clientY : e.clientY; return { x: cx - r.left, y: cy - r.top }; };
         cvs.addEventListener('touchstart', (e) => { drawing = true; sigCtx.beginPath(); sigCtx.moveTo(getP(e).x, getP(e).y); e.preventDefault(); });
         cvs.addEventListener('touchmove', (e) => { if(!drawing) return; sigCtx.lineTo(getP(e).x, getP(e).y); sigCtx.stroke(); e.preventDefault(); });
         window.addEventListener('touchend', () => drawing = false);
         sigCtx.lineWidth = 2; sigCtx.strokeStyle = "#000";
     }
+    function clearSig() { sigCtx.clearRect(0,0,1000,1000); }
 
+    // 保存処理
     async function finalizeProcess() {
         document.getElementById('pdf-progress').style.display = 'flex';
         const sigData = document.getElementById('sig-canvas').toDataURL("image/png");
         try {
-            const updates = currentMode === 'boundary' 
-                ? (isOwner ? { sig_a_done: true, sig_a_data: sigData, owner_address: document.getElementById('current-address').value } 
-                           : { sig_b_done: true, sig_b_data: sigData, is_agreed: true })
-                : { sig_a_done: true, sig_a_data: sigData };
-            await supabase.from('forest_plots').update(updates).eq('id', targetData.id);
-            alert("ブロックチェーンに記録完了しました。");
-            location.reload();
+            if (currentMode === 'boundary') {
+                const updates = isOwner 
+                    ? { sig_a_done: true, sig_a_data: sigData, owner_address: document.getElementById('current-address').value }
+                    : { sig_b_done: true, sig_b_data: sigData, is_agreed: true };
+                await supabase.from('forest_plots').update(updates).eq('id', targetData.id);
+                alert("手続きが完了しました。");
+                location.reload();
+            } else {
+                alert("立木売買の契約を記録しました。");
+                location.reload();
+            }
         } catch (e) {
-            alert("保存に失敗しました。");
+            alert("エラー: " + e.message);
             document.getElementById('pdf-progress').style.display = 'none';
         }
     }
 
-    function clearSig() { sigCtx.clearRect(0,0,1000,1000); }
-    function closeDetail() { document.body.classList.remove('mode-split'); }
-    function getUrls(d) { try { return JSON.parse(d); } catch(e) { return []; } }
+    function getUrls(d) {
+        if (!d) return [];
+        try { return JSON.parse(d); } catch(e) {
+            const m = String(d).match(/https?:\/\/[^\s,"{}]+/g);
+            return m ? m.map(u => u.replace(/[\]\}\s,]+$/, '')) : [];
+        }
+    }
 
+    // LIFF初期化
     liff.init({ liffId: "2009576392-CvuNETRQ" }).catch(e => console.log(e));
 </script>
 </body>
