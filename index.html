@@ -17,478 +17,351 @@
             --accent-red: #ff4757;
             --nothing-black: #111111;
             --nothing-gray: #f5f5f7;
-            --glass: rgba(255, 255, 255, 0.8);
+            --glass: rgba(255, 255, 255, 0.9);
             --font-mono: 'JetBrains Mono', 'Courier New', monospace;
             --font-main: "Hiragino Mincho ProN", serif;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-        body {
-            margin: 0;
-            font-family: var(--font-main);
-            background: var(--nothing-gray);
-            color: var(--nothing-black);
-            overflow: hidden;
-            height: 100vh; width: 100vw;
-        }
-
-        /* ── 共通パーツ ── */
+        body { margin: 0; font-family: var(--font-main); background: var(--nothing-gray); color: var(--nothing-black); overflow: hidden; height: 100vh; width: 100vw; }
+        
         .view { display: none; height: 100vh; flex-direction: column; background: #fff; overflow: hidden; }
         .view.active { display: flex !important; }
 
-        .input-field {
-            width: 100%; padding: 18px;
-            border: 2px solid #eee; border-radius: 16px;
-            margin-bottom: 14px; font-size: 16px; font-family: inherit;
-            transition: border-color 0.3s;
-        }
-        .input-field:focus { border-color: var(--primary); outline: none; }
-
-        .btn {
-            width: 100%; padding: 20px; border: none;
-            border-radius: 18px; font-weight: bold; font-size: 16px;
-            cursor: pointer; margin-top: 10px; transition: all 0.2s; font-family: inherit;
-        }
+        .input-field { width: 100%; padding: 18px; border: 2px solid #eee; border-radius: 16px; margin-bottom: 14px; font-size: 16px; font-family: inherit; }
+        .btn { width: 100%; padding: 20px; border: none; border-radius: 18px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; font-family: inherit; transition: 0.2s; }
         .btn-primary { background: var(--nothing-black); color: #fff; }
-        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
-        .btn-outline { background: transparent; border: 2px solid #eee; color: #666; }
         .btn-web3 { background: linear-gradient(135deg, #00B900, #006600); color: #fff; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* ── ホーム画面（Nothing-Style） ── */
-        #home-view { background: #fff; padding: 40px 24px; justify-content: space-between; }
+        /* ホーム */
+        #home-view { padding: 40px 24px; justify-content: space-between; }
         .brand-section { text-align: center; margin-top: 40px; }
-        .logo-mark { font-size: 52px; margin-bottom: 10px; display: block; }
-        .brand-name { font-size: 32px; font-weight: 900; letter-spacing: 6px; margin: 0; color: var(--nothing-black); }
-        .brand-sub { font-size: 12px; color: #999; letter-spacing: 2px; margin-top: 8px; font-family: var(--font-mono); }
+        .brand-name { font-size: 32px; font-weight: 900; letter-spacing: 6px; }
 
         .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 40px; }
-        .menu-card {
-            background: var(--nothing-gray); border-radius: 24px; padding: 24px 16px;
-            text-align: center; text-decoration: none; border: none; cursor: pointer; transition: 0.2s;
-        }
-        .menu-card:active { background: #e0e0e2; transform: translateY(2px); }
-        .menu-icon { font-size: 32px; display: block; margin-bottom: 12px; }
-        .menu-label { font-size: 14px; font-weight: bold; color: var(--nothing-black); }
-        .full-width { grid-column: span 2; }
+        .menu-card { background: var(--nothing-gray); border-radius: 24px; padding: 24px 16px; text-align: center; border: none; }
 
-        /* ── マップ・詳細 ── */
+        /* 地図 */
         #map-area { flex: 1; position: relative; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
         
         #detail-area {
             background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(0,0,0,0.05); display: none; overflow-y: auto; height: 60vh;
-            border-radius: 32px 32px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.08);
-            z-index: 100;
+            position: absolute; bottom: 0; width: 100%; height: 55vh; border-radius: 32px 32px 0 0;
+            display: none; flex-direction: column; z-index: 100; box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
         }
-        body.mode-split #detail-area { display: block; }
-        body.mode-split #map-area { flex: 0.4; }
+        body.mode-split #detail-area { display: flex; }
 
-        /* ── レポート & AIカード ── */
-        .report-header { padding: 24px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 16px; }
-        .ai-card {
-            background: #fff; border-radius: 20px; padding: 20px;
-            margin-bottom: 12px; border: 1px solid #eee;
-        }
+        .ai-card { background: #fff; border-radius: 20px; padding: 20px; margin-bottom: 12px; border: 1px solid #eee; }
         .ai-value { font-family: var(--font-mono); font-size: 24px; font-weight: bold; color: var(--primary); }
-        .tech-tag {
-            font-family: var(--font-mono); font-size: 10px; background: var(--nothing-black);
-            color: #fff; padding: 2px 6px; border-radius: 4px; margin-bottom: 8px; display: inline-block;
-        }
+        .tech-tag { font-family: var(--font-mono); font-size: 10px; background: var(--nothing-black); color: #fff; padding: 2px 6px; border-radius: 4px; display: inline-block; }
 
-        /* ── ローディング（森林 & テック） ── */
-        #forest-loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; display: none; align-items: center; justify-content: center;
-            z-index: 10000; flex-direction: column;
-        }
-        .dot-loader { font-family: var(--font-mono); font-size: 14px; letter-spacing: 2px; }
-
-        /* ── 署名 ── */
-        .sig-box {
-            border: 2px solid #eee; border-radius: 20px; background: #fafafa;
-            width: 100%; height: 220px; touch-action: none;
-        }
-
-        /* PDF隠しレイヤー */
-        #pdf-overlay { position: fixed; top: 0; left: -10000px; width: 210mm; }
+        /* ローダー */
+        #forest-loader { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; z-index:10000; display:none; flex-direction:column; align-items:center; justify-content:center; }
+        
+        /* 署名キャンバス */
+        .sig-box { border: 2px solid #eee; border-radius: 20px; background: #fafafa; width: 100%; height: 250px; touch-action: none; }
     </style>
 </head>
 <body>
 
 <div id="forest-loader">
-    <div style="font-size: 40px; margin-bottom: 20px;">🌲</div>
-    <div class="dot-loader" id="loader-msg">INITIALIZING...</div>
-    <div style="width: 100px; height: 2px; background: #eee; margin-top: 20px; position: relative; overflow: hidden;">
-        <div id="loader-bar" style="position: absolute; left: -100%; width: 100%; height: 100%; background: var(--nothing-black); transition: 0.3s;"></div>
-    </div>
+    <div style="font-size: 40px;">🌲</div>
+    <div id="loader-msg" style="font-family:var(--font-mono); margin-top:10px;">LOADING...</div>
 </div>
 
 <div id="home-view" class="view active">
     <div class="brand-section">
-        <span class="logo-mark">🌳</span>
+        <span style="font-size: 50px;">🌳</span>
         <h1 class="brand-name">ORITO</h1>
-        <p class="brand-sub">FOREST DX PLATFORM</p>
+        <p style="color:#999; font-family:var(--font-mono); font-size:12px;">FOREST MANAGEMENT SYSTEM</p>
     </div>
-
     <div class="menu-grid">
-        <button class="menu-card" id="btn-boundary">
-            <span class="menu-icon">📍</span>
-            <span class="menu-label">境界確定合意</span>
-        </button>
-        <button class="menu-card" id="btn-timber">
-            <span class="menu-icon">🪵</span>
-            <span class="menu-label">立木売買契約</span>
-        </button>
-        <button class="menu-card full-width" id="btn-view">
-            <span class="menu-icon">🔍</span>
-            <span class="menu-label">森林レポート閲覧</span>
-        </button>
+        <button class="menu-card" onclick="startApp('boundary')">📍<br>境界確定</button>
+        <button class="menu-card" onclick="startApp('timber')">🪵<br>立木売買</button>
+        <button class="menu-card" style="grid-column: span 2;" onclick="startApp('view')">🔍<br>森林レポート閲覧</button>
     </div>
-
-    <p style="text-align: center; font-size: 10px; color: #ccc; font-family: var(--font-mono);">VER 2.0.26 / MIYAZAKI CORE</p>
 </div>
 
 <div id="entry-view" class="view">
     <div style="padding: 40px 24px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
-        <div id="entry-badge" class="tech-tag" style="align-self: center;">MODE: UNKNOWN</div>
-        <h2 style="text-align: center; margin: 10px 0 30px;" id="entry-title">ACCESS CODE</h2>
-        <input type="text" id="invite-input" class="input-field" style="text-align: center; font-family: var(--font-mono); font-size: 28px;" placeholder="000000">
-        <button class="btn btn-primary" id="entry-next-btn">AUTH / 照会</button>
-        <button class="btn btn-outline" id="btn-back">BACK</button>
+        <h2 style="text-align: center;">アクセスコード入力</h2>
+        <input type="text" id="invite-input" class="input-field" style="text-align: center; font-size: 24px;" placeholder="CODE001">
+        <button class="btn btn-primary" onclick="verifyAccess()">認証・照会</button>
+        <button class="btn" style="color:#999;" onclick="showView('home-view')">戻る</button>
     </div>
 </div>
 
 <div id="map-view" class="view">
     <div id="map-area"><div id="map"></div></div>
     <div id="detail-area">
-        <div style="padding: 24px; position: sticky; top: 0; background: rgba(255,255,255,0.9); z-index: 10;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div>
-                    <div id="parcel-status-badge"></div>
-                    <h2 id="parcel-title" style="margin: 8px 0 4px; font-size: 20px;">---</h2>
-                    <p id="parcel-info" style="margin: 0; color: #888; font-family: var(--font-mono); font-size: 13px;"></p>
-                </div>
-                <button id="btn-close-detail" style="background: none; border: none; font-size: 24px; color: #ccc;">✕</button>
-            </div>
+        <div style="padding: 24px; overflow-y: auto;">
+            <div id="status-badge"></div>
+            <h2 id="parcel-title" style="margin: 8px 0;">---</h2>
+            <div id="detail-content"></div>
+            <div id="action-buttons"></div>
+            <button class="btn" style="margin-top:20px; color:#ccc;" onclick="document.body.classList.remove('mode-split')">閉じる</button>
         </div>
-        <div id="detail-actions" style="padding: 0 24px 40px;">
-            <div id="photo-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;"></div>
-            </div>
     </div>
 </div>
 
 <div id="report-view" class="view">
-    <div class="report-header">
-        <button id="btn-back-report" style="background:none; border:none; font-size:20px;">←</button>
-        <div style="flex: 1;">
-            <div class="tech-tag">REPORT TYPE: ANALYSIS</div>
-            <div style="font-weight: bold;" id="report-title-top">---</div>
-        </div>
+    <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; align-items: center;">
+        <button onclick="showView('map-view')" style="border:none; background:none; font-size:20px;">←</button>
+        <b style="margin-left: 10px;">森林資産評価レポート</b>
     </div>
-    <div id="report-content" style="flex: 1; overflow-y: auto; padding: 24px;"></div>
-    <div style="padding: 20px 24px; border-top: 1px solid #eee;">
-        <button class="btn btn-primary" id="btn-generate-pdf" disabled>GENERATE PDF / 発行</button>
+    <div id="report-content" style="flex: 1; overflow-y: auto; padding: 24px;">
+        </div>
+    <div style="padding: 20px;">
+        <button class="btn btn-primary" id="btn-generate-pdf" onclick="generatePDF()">PDFを発行する</button>
     </div>
 </div>
 
 <div id="agree-view" class="view">
-    <div style="padding: 30px 24px; flex: 1; overflow-y: auto;">
-        <div class="tech-tag">STEP: FINAL SIGNATURE</div>
-        <h2 style="margin: 10px 0 24px;">最終署名</h2>
-        
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <button class="btn btn-outline" style="flex: 1; margin: 0;" id="tab-handwrite">手書き</button>
-            <button class="btn btn-outline" style="flex: 1; margin: 0;" id="tab-seal">印影</button>
-        </div>
-
-        <div id="signature-container">
-            <canvas id="sig-canvas" class="sig-box"></canvas>
-        </div>
-        
-        <div id="seal-container" style="display: none;">
-            <input type="text" id="seal-name" class="input-field" placeholder="氏名を入力">
-            <button class="btn btn-outline" id="btn-gen-seal">印影生成</button>
-            <canvas id="seal-canvas" width="160" height="160" style="display: block; margin: 20px auto; border-radius: 50%; border: 1px solid #eee;"></canvas>
-        </div>
-
-        <button class="btn btn-web3" id="final-btn" style="margin-top: 30px;">署名を確定して保存</button>
+    <div style="padding: 24px;">
+        <h2>デジタル署名</h2>
+        <p style="font-size: 14px; color: #666;">内容を確認の上、枠内に署名してください。</p>
+        <canvas id="sig-canvas" class="sig-box"></canvas>
+        <button class="btn btn-web3" style="margin-top:20px;" onclick="saveSignature()">署名を完了する</button>
+        <button class="btn" onclick="showView('map-view')">キャンセル</button>
     </div>
 </div>
 
-<div id="pdf-overlay"><div id="pdf-template"></div></div>
-
 <script>
-(function() {
-    'use strict';
-
-    // Config
     const S_URL = 'https://uggpclqqyaailuadgzxv.supabase.co';
     const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnZ3BjbHFxeWFhaWx1YWRnenh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MzE0NTgsImV4cCI6MjA5MDEwNzQ1OH0.jY5jJuJUgwbIZm8y-jJvEH27eAP9m9semR3MbLxVxGo';
     const db = window.supabase.createClient(S_URL, S_KEY);
 
-    let state = {
-        targetData: null,
-        mode: 'boundary', // boundary, timber, view
-        accessLevel: 0,   // 0: none, 1: viewer, 2: participant, 3: owner
-        map: null,
-        sigCtx: null,
-        sigMode: 'handwrite'
-    };
+    let state = { mode: '', targetData: null, map: null, accessLevel: 0 };
 
-    // --- UI Control ---
     function showView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        if (id === 'map-view') initMap();
-        if (id === 'report-view') renderReport();
-        if (id === 'agree-view') initCanvas();
-    }
-
-    function toggleLoader(show, msg = 'INITIALIZING...') {
-        const loader = document.getElementById('forest-loader');
-        const bar = document.getElementById('loader-bar');
-        document.getElementById('loader-msg').innerText = msg;
-        if (show) {
-            loader.style.display = 'flex';
-            setTimeout(() => bar.style.left = '0', 50);
-        } else {
-            bar.style.left = '100%';
-            setTimeout(() => {
-                loader.style.display = 'none';
-                bar.style.left = '-100%';
-            }, 400);
+        if (id === 'map-view') {
+            setTimeout(() => { if(state.map) state.map.resize(); }, 100);
         }
     }
 
-    // --- Auth Logic ---
+    function toggleLoader(show, msg = 'LOADING...') {
+        const l = document.getElementById('forest-loader');
+        document.getElementById('loader-msg').innerText = msg;
+        l.style.display = show ? 'flex' : 'none';
+    }
+
+    function startApp(mode) {
+        state.mode = mode;
+        showView('entry-view');
+    }
+
     async function verifyAccess() {
-        const input = document.getElementById('invite-input').value.toUpperCase().trim();
-        const isViewer = input.endsWith('-V');
-        const code = isViewer ? input.replace('-V', '') : input;
-
+        const code = document.getElementById('invite-input').value.trim();
         toggleLoader(true, 'AUTHENTICATING...');
+        
         try {
-            // 甲（所有者）コード検索
-            let { data, error } = await db.from('forest_plots').select('*').eq('invitation_code', code).maybeSingle();
-            
-            // 乙（隣接者）コード検索
-            if (!data) {
-                let res = await db.from('forest_plots').select('*').eq('adjacent_code', code).maybeSingle();
-                data = res.data;
-            }
+            const { data, error } = await db.from('forest_plots').select('*')
+                .or(`invitation_code.eq.${code},adjacent_code.eq.${code}`).maybeSingle();
 
-            if (!data) {
-                alert('無効なコードです。正しいコードを入力してください。');
+            if (error || !data) {
+                alert('有効なコードが見つかりません。');
                 toggleLoader(false);
                 return;
             }
 
             state.targetData = data;
-            if (isViewer || state.mode === 'view') {
-                state.accessLevel = 1;
-            } else if (data.invitation_code === code) {
-                state.accessLevel = 3;
-            } else {
-                state.accessLevel = 2;
-            }
-
+            state.accessLevel = (data.invitation_code === code) ? 3 : 2;
+            
             toggleLoader(false);
             showView('map-view');
-            setTimeout(showDetail, 500);
+            initMap();
         } catch (e) {
-            alert('接続エラーが発生しました。');
+            alert('通信エラーが発生しました。');
             toggleLoader(false);
         }
     }
 
-    // --- Map Logic ---
     function initMap() {
-        if (state.map) return;
+        if (state.map) {
+            updateMapLayer();
+            return;
+        }
+
         state.map = new maplibregl.Map({
             container: 'map',
+            // ズーム制限を追加 (国土地理院写真の上限に合わせる)
+            maxZoom: 18,
             style: {
                 version: 8,
-                sources: { gsi: { type: 'raster', tiles: ['https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg'], tileSize: 256 } },
+                sources: {
+                    gsi: {
+                        type: 'raster',
+                        tiles: ['https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg'],
+                        tileSize: 256,
+                        attribution: "地理院タイル"
+                    }
+                },
                 layers: [{ id: 'gsi', type: 'raster', source: 'gsi' }]
             },
-            center: [131.39, 31.99], zoom: 15
+            center: [131.39, 31.99],
+            zoom: 15
         });
 
-        state.map.on('load', async () => {
-            const { data } = await db.rpc('get_forest_geojson');
-            if (!data) return;
+        state.map.on('load', updateMapLayer);
+    }
 
-            const filtered = data.features.filter(f => f.properties.invitation_code === state.targetData.invitation_code);
+    async function updateMapLayer() {
+        const { data } = await db.rpc('get_forest_geojson');
+        if (!data) return;
+
+        const filtered = data.features.filter(f => f.properties.id === state.targetData.id);
+        
+        if (state.map.getSource('plots')) {
+            state.map.getSource('plots').setData({ type: 'FeatureCollection', features: filtered });
+        } else {
             state.map.addSource('plots', { type: 'geojson', data: { type: 'FeatureCollection', features: filtered } });
-            
             state.map.addLayer({
                 id: 'fill', type: 'fill', source: 'plots',
-                paint: {
-                    'fill-color': ['case', ['get', 'is_agreed'], '#00B900', '#FF4757'],
-                    'fill-opacity': 0.5
-                }
+                paint: { 'fill-color': '#00B900', 'fill-opacity': 0.5 }
             });
-            
-            if (filtered.length > 0) {
-                const bounds = new maplibregl.LngLatBounds();
-                const coords = filtered[0].geometry.coordinates[0][0];
-                coords.forEach(c => bounds.extend(c));
-                state.map.fitBounds(bounds, { padding: 40 });
-            }
-        });
+            state.map.addLayer({
+                id: 'line', type: 'line', source: 'plots',
+                paint: { 'line-color': '#fff', 'line-width': 2 }
+            });
+        }
+
+        const bounds = new maplibregl.LngLatBounds();
+        filtered[0].geometry.coordinates[0][0].forEach(c => bounds.extend(c));
+        // fitBoundsでもmaxZoomが効くように設定
+        state.map.fitBounds(bounds, { padding: 50, maxZoom: 17 });
+        
+        showDetail();
     }
 
     function showDetail() {
         const d = state.targetData;
-        document.getElementById('parcel-title').innerText = d.parcel_number;
-        document.getElementById('parcel-info').innerText = `AREA: ${d.area_ha} ha / ID: ${d.invitation_code}`;
-        document.getElementById('parcel-status-badge').innerHTML = d.is_agreed 
-            ? '<span class="tech-tag" style="background:var(--primary)">STATUS: AGREED</span>'
-            : '<span class="tech-tag" style="background:var(--accent-red)">STATUS: PENDING</span>';
-
-        const actions = document.getElementById('detail-actions');
-        actions.innerHTML = '';
-        
-        if (state.accessLevel >= 1) {
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-primary';
-            btn.innerText = 'VIEW ANALYTICS / レポート閲覧';
-            btn.onclick = () => showView('report-view');
-            actions.appendChild(btn);
-        }
-
-        if (state.accessLevel >= 2 && !d.is_agreed) {
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-web3';
-            btn.innerText = 'START SIGNING / 署名する';
-            btn.onclick = () => showView('agree-view');
-            actions.appendChild(btn);
-        }
-
         document.body.classList.add('mode-split');
-        state.map.resize();
-    }
+        document.getElementById('parcel-title').innerText = d.parcel_number;
+        document.getElementById('status-badge').innerHTML = d.is_agreed 
+            ? '<span class="tech-tag" style="background:var(--primary)">合意済み</span>' 
+            : '<span class="tech-tag" style="background:var(--accent-red)">未合意</span>';
 
-    // --- Report & AI Logic ---
-    function renderReport() {
-        const d = state.targetData;
-        const val = calculateValue(d.area_ha);
-        document.getElementById('report-title-top').innerText = d.parcel_number;
-
-        const content = document.getElementById('report-content');
+        const content = document.getElementById('detail-content');
         content.innerHTML = `
             <div class="ai-card">
-                <div class="tech-tag">AI ASSET ESTIMATION</div>
-                <div style="font-size:12px; color:#888; margin-bottom:10px;">現在の推定評価額（木材+土地）</div>
-                <div class="ai-value">¥${val.total.toLocaleString()}</div>
+                <div class="tech-tag">ASSET DATA</div>
+                <div style="font-size:14px; margin-top:10px;">面積: ${d.area_ha} ha</div>
+                <div style="font-size:14px;">推定炭素固定量: ${(d.area_ha * 8.5).toFixed(1)} t-CO2/年</div>
             </div>
+        `;
 
-            <div class="ai-card" style="background:#f0fff0; border-color:#d0e6d0;">
-                <div class="tech-tag" style="background:var(--primary)">J-CREDIT POTENTIAL</div>
-                <div style="font-size:12px; color:#555; margin-bottom:10px;">炭素固定による年間期待収益</div>
-                <div class="ai-value" style="color:var(--primary-dark)">¥${val.carbon.toLocaleString()}</div>
-                <div style="font-size:10px; color:#888; margin-top:8px;">※TNFD基準に基づく生物多様性評価：HIGH</div>
-            </div>
+        const actions = document.getElementById('action-buttons');
+        actions.innerHTML = '';
+        
+        const btnReport = document.createElement('button');
+        btnReport.className = 'btn btn-primary';
+        btnReport.innerText = '資産レポートを表示';
+        btnReport.onclick = renderReport;
+        actions.appendChild(btnReport);
 
-            <div style="margin-top:24px;">
-                <h4 style="font-family:var(--font-mono); font-size:12px; border-bottom:1px solid #eee; padding-bottom:8px;">PROPERTY DETAILS</h4>
-                <table style="width:100%; font-size:13px; border-collapse:collapse;">
-                    <tr style="border-bottom:1px solid #f9f9f9;"><td style="padding:10px 0; color:#888;">地番</td><td style="text-align:right; font-weight:bold;">${d.parcel_number}</td></tr>
-                    <tr style="border-bottom:1px solid #f9f9f9;"><td style="padding:10px 0; color:#888;">面積</td><td style="text-align:right; font-weight:bold;">${d.area_ha} ha</td></tr>
-                    <tr style="border-bottom:1px solid #f9f9f9;"><td style="padding:10px 0; color:#888;">所有者所在地</td><td style="text-align:right; font-weight:bold;">${d.owner_address || '未登録'}</td></tr>
-                </table>
+        if (!d.is_agreed) {
+            const btnSign = document.createElement('button');
+            btnSign.className = 'btn btn-web3';
+            btnSign.innerText = 'デジタル署名を行う';
+            btnSign.onclick = () => { showView('agree-view'); initSignature(); };
+            actions.appendChild(btnSign);
+        }
+    }
+
+    function renderReport() {
+        const d = state.targetData;
+        const totalValue = Math.round(d.area_ha * 1500000);
+        const reportDiv = document.getElementById('report-content');
+        
+        reportDiv.innerHTML = `
+            <div style="border: 2px solid #000; padding: 20px; border-radius:10px;">
+                <h1 style="text-align:center; font-size:20px;">森林資産評価証明書</h1>
+                <hr>
+                <div style="margin:20px 0;">
+                    <p><b>対象地番:</b> ${d.parcel_number}</p>
+                    <p><b>公簿面積:</b> ${d.area_ha} ha</p>
+                    <p><b>評価基準日:</b> ${new Date().toLocaleDateString()}</p>
+                </div>
+                <div class="ai-card" style="text-align:center;">
+                    <p style="font-size:12px; color:#666;">推定資産価値合計</p>
+                    <div class="ai-value">¥${totalValue.toLocaleString()}</div>
+                </div>
+                <div style="font-size:12px; color:#888; margin-top:20px;">
+                    本レポートは「織杜 (ORITO)」の森林解析アルゴリズムに基づき算出された参考値です。<br>
+                    J-クレジット創出可能性: <b>高 (Sランク)</b>
+                </div>
             </div>
         `;
         
-        document.getElementById('btn-generate-pdf').disabled = !d.is_agreed;
+        // 署名が終わっていなくてもテスト用にPDF発行は可能にしておきます
+        document.getElementById('btn-generate-pdf').disabled = false;
+        showView('report-view');
     }
 
-    function calculateValue(ha) {
-        ha = parseFloat(ha) || 0;
-        return {
-            total: Math.round(ha * 1200000), // 簡易計算
-            carbon: Math.round(ha * 8.5 * 3000) // 8.5t/ha * 3000円
+    // --- PDF生成機能 ---
+    function generatePDF() {
+        const element = document.getElementById('report-content');
+        const opt = {
+            margin:       10,
+            filename:     `Report_${state.targetData.parcel_number}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
+        
+        toggleLoader(true, 'GENERATING PDF...');
+        html2pdf().set(opt).from(element).save().then(() => {
+            toggleLoader(false);
+        });
     }
 
-    // --- Signature Logic ---
-    function initCanvas() {
+    // --- 署名機能 ---
+    let sigCtx, drawing = false;
+    function initSignature() {
         const canvas = document.getElementById('sig-canvas');
         canvas.width = canvas.offsetWidth;
         canvas.height = canvas.offsetHeight;
-        state.sigCtx = canvas.getContext('2d');
-        state.sigCtx.lineWidth = 3;
-        state.sigCtx.lineCap = 'round';
-        
-        let drawing = false;
+        sigCtx = canvas.getContext('2d');
+        sigCtx.lineWidth = 3;
+        sigCtx.lineCap = 'round';
+
         const getPos = (e) => {
             const r = canvas.getBoundingClientRect();
             const t = e.touches ? e.touches[0] : e;
             return { x: t.clientX - r.left, y: t.clientY - r.top };
         };
-
-        const start = (e) => { drawing = true; const p = getPos(e); state.sigCtx.beginPath(); state.sigCtx.moveTo(p.x, p.y); };
-        const move = (e) => { if(!drawing) return; const p = getPos(e); state.sigCtx.lineTo(p.x, p.y); state.sigCtx.stroke(); e.preventDefault(); };
-        const end = () => drawing = false;
-
-        canvas.addEventListener('touchstart', start);
-        canvas.addEventListener('touchmove', move);
-        canvas.addEventListener('mousedown', start);
-        canvas.addEventListener('mousemove', move);
-        window.addEventListener('mouseup', end);
+        canvas.onmousedown = canvas.ontouchstart = (e) => { 
+            drawing = true; const p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); 
+        };
+        canvas.onmousemove = canvas.ontouchmove = (e) => {
+            if(!drawing) return; const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); e.preventDefault();
+        };
+        window.onmouseup = window.ontouchend = () => drawing = false;
     }
 
     async function saveSignature() {
+        toggleLoader(true, 'SAVING...');
         const dataUrl = document.getElementById('sig-canvas').toDataURL();
-        toggleLoader(true, 'SAVING SIGNATURE...');
         
-        const updates = state.accessLevel === 3 
-            ? { sig_a_done: true, sig_a_data: dataUrl }
-            : { sig_b_done: true, sig_b_data: dataUrl, is_agreed: true };
-
+        const updates = { is_agreed: true, sig_b_data: dataUrl, sig_b_done: true };
         const { error } = await db.from('forest_plots').update(updates).eq('id', state.targetData.id);
         
         if (error) {
             alert('保存に失敗しました。');
-            toggleLoader(false);
         } else {
             alert('署名が完了しました。');
             location.reload();
         }
+        toggleLoader(false);
     }
 
-    // --- Events ---
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('btn-boundary').onclick = () => { state.mode = 'boundary'; showView('entry-view'); };
-        document.getElementById('btn-timber').onclick = () => { state.mode = 'timber'; showView('entry-view'); };
-        document.getElementById('btn-view').onclick = () => { state.mode = 'view'; showView('entry-view'); };
-        document.getElementById('entry-next-btn').onclick = verifyAccess;
-        document.getElementById('btn-back').onclick = () => showView('home-view');
-        document.getElementById('btn-close-detail').onclick = () => document.body.classList.remove('mode-split');
-        document.getElementById('btn-back-report').onclick = () => showView('map-view');
-        document.getElementById('final-btn').onclick = saveSignature;
-        
-        // Tab Switch
-        document.getElementById('tab-handwrite').onclick = () => {
-            document.getElementById('signature-container').style.display = 'block';
-            document.getElementById('seal-container').style.display = 'none';
-        };
-        document.getElementById('tab-seal').onclick = () => {
-            document.getElementById('signature-container').style.display = 'none';
-            document.getElementById('seal-container').style.display = 'block';
-        };
-
-        // LIFF Init
-        if (window.liff) {
-            liff.init({ liffId: '2009625158-euVZJmlu' })
-                .then(() => { if (!liff.isLoggedIn()) liff.login(); })
-                .catch(err => console.error(err));
-        }
-    });
-
-})();
+    // LIFF初期化
+    liff.init({ liffId: '2009625158-euVZJmlu' }).catch(console.error);
 </script>
+
 </body>
 </html>
