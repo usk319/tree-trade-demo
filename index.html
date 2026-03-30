@@ -586,15 +586,24 @@
 
         showLoader();
         try {
-            /* 甲コード(invitation_code) と 乙コード(adjacent_code) の両方を照合 */
+            /* 甲コード(invitation_code) を先に照合 */
             var res = await db.from('forest_plots')
                 .select('*')
-                .or('invitation_code.eq.' + code + ',adjacent_code.eq.' + code)
+                .eq('invitation_code', code)
                 .maybeSingle();
+
+            /* 見つからなければ 乙コード(adjacent_code) で照合 */
+            if (!res.data && !res.error) {
+                res = await db.from('forest_plots')
+                    .select('*')
+                    .eq('adjacent_code', code)
+                    .maybeSingle();
+            }
 
             if (res.error || !res.data) {
                 hideLoader();
-                alert('無効なコードです。\n・甲（所有者）コード：招待コードをそのまま入力\n・乙（隣接者）コード：管理者から発行された乙用コード\n・閲覧コード：招待コード末尾に "-V" を付加');
+                var errDetail = res.error ? '\n[詳細: ' + res.error.message + ']' : '';
+                alert('無効なコードです。\n・甲（所有者）コード：招待コードをそのまま入力\n・乙（隣接者）コード：管理者から発行された乙用コード\n・閲覧コード：招待コード末尾に "-V" を付加' + errDetail);
                 return;
             }
             targetData = res.data;
