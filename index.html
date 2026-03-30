@@ -586,21 +586,29 @@
 
         showLoader();
         try {
-            var res = await db.from('forest_plots').select('*').eq('invitation_code', code).single();
+            /* 甲コード(invitation_code) と 乙コード(adjacent_code) の両方を照合 */
+            var res = await db.from('forest_plots')
+                .select('*')
+                .or('invitation_code.eq.' + code + ',adjacent_code.eq.' + code)
+                .maybeSingle();
+
             if (res.error || !res.data) {
                 hideLoader();
-                alert('無効なコードです。\n（閲覧コードは招待コードの末尾に "-V" を付けてください）');
+                alert('無効なコードです。\n・甲（所有者）コード：招待コードをそのまま入力\n・乙（隣接者）コード：管理者から発行された乙用コード\n・閲覧コード：招待コード末尾に "-V" を付加');
                 return;
             }
             targetData = res.data;
 
-            /* アクセスレベル判定 */
+            /* アクセスレベル判定 — どちらのコードで一致したかで役割を決める */
             if (isViewCode || currentMode === 'view') {
                 accessLevel = ACCESS_VIEWER;
-            } else if (!targetData.sig_a_done) {
+                isOwner     = false;
+            } else if (targetData.invitation_code === code) {
+                /* 甲（所有者）コードで一致 */
                 accessLevel = ACCESS_OWNER;
                 isOwner     = true;
             } else {
+                /* 乙（隣接者）コードで一致 */
                 accessLevel = ACCESS_PARTICIPANT;
                 isOwner     = false;
             }
@@ -899,17 +907,19 @@
         var sigStatus = (d.is_agreed || (d.sig_a_done && d.sig_b_done))
             ? '✅ 両者合意済み' : d.sig_a_done ? '🟡 甲のみ署名済み' : '🔴 未署名';
 
-        // 閲覧コード表示（所有者のみ）
+        // コード一覧表示（所有者のみ）
         var shareCodeHtml = '';
         if (isOwnerAccess()) {
-            var viewCode = d.invitation_code + VIEW_SUFFIX;
+            var viewCode     = d.invitation_code + VIEW_SUFFIX;
+            var adjCode      = d.adjacent_code || '（未設定）';
             shareCodeHtml =
                 '<div class="report-section">' +
-                '<div class="report-title">👁️ 閲覧許可コード</div>' +
+                '<div class="report-title">🔑 コード管理（所有者専用）</div>' +
                 '<div class="share-code-box">' +
-                    '<div style="font-size:12px; color:#666; margin-bottom:4px;">このコードを共有すると、相手が森林レポートを閲覧できます</div>' +
-                    '<div class="share-code">' + viewCode + '</div>' +
-                    '<button class="btn btn-sm" onclick="navigator.clipboard.writeText(\'' + viewCode + '\').then(function(){alert(\'コードをコピーしました\');})" style="background:var(--green); color:#fff; margin-top:8px;">📋 コードをコピー</button>' +
+                    '<div style="font-size:11px; color:#666; margin-bottom:10px;">各コードを相手に共有してください</div>' +
+                    codeRow('👑 甲（所有者）コード', d.invitation_code) +
+                    codeRow('✏️ 乙（隣接者）コード', adjCode) +
+                    codeRow('👁️ 閲覧専用コード',     viewCode) +
                 '</div>' +
                 '</div>';
         }
@@ -967,6 +977,19 @@
         var canPDF = !!(d.is_agreed || (d.sig_a_done && d.sig_b_done));
         document.getElementById('btn-generate-pdf').disabled   = !canPDF;
         document.getElementById('pdf-status-msg').innerText    = canPDF ? 'PDF発行が可能です' : '2名の署名が完了するとPDFを発行できます';
+    }
+
+    function codeRow(label, code) {
+        var safe = code.replace(/'/g, "\\'");
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #d4edda;">' +
+            '<span style="font-size:12px;color:#555;">' + label + '</span>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+                '<span style="font-weight:bold;letter-spacing:2px;font-size:13px;color:var(--dgreen);">' + code + '</span>' +
+                (code !== '（未設定）'
+                    ? '<button onclick="navigator.clipboard.writeText(\'' + safe + '\').then(function(){alert(\'コピーしました\');})" style="border:none;background:var(--green);color:#fff;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">コピー</button>'
+                    : '') +
+            '</div>' +
+        '</div>';
     }
 
     function sec(title, content) {
@@ -1031,17 +1054,57 @@
                 '<p style="font-size:8pt;color:#aaa;text-align:center;margin-top:8px;">本書は織杜ORITOプラットフォームにより電子的に作成・保管されています</p>' +
             '</div>';
 
+        var pdfFileName = 'pdf/orito_' + (d.parcel_number || 'report').replace(/\s/g,'_') + '_' + Date.now() + '.pdf';
         try {
-            await html2pdf().from(document.getElementById('pdf-template')).set({
+            /* ── Step1: PDF を Blob として生成 ── */
+            updateStatus('📄 PDF生成中...');
+            var pdfBlob = await html2pdf().from(document.getElementById('pdf-template')).set({
                 margin: 0,
-                filename: 'orito_' + (d.parcel_number||'report') + '_' + Date.now() + '.pdf',
+                filename: pdfFileName,
                 image:       { type: 'jpeg', quality: 0.92 },
                 html2canvas: { scale: 2, useCORS: true, allowTaint: true },
                 jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            }).save();
-            alert('PDFを発行しました。');
-        } catch(e) { alert('PDF生成に失敗しました: ' + e.message); }
-        hideLoader();
+            }).output('blob');
+
+            /* ── Step2: Supabase Storage にアップロード ── */
+            updateStatus('☁️ ストレージへアップロード中...');
+            var uploadRes = await db.storage
+                .from('orito-pdfs')
+                .upload(pdfFileName, pdfBlob, { contentType: 'application/pdf', upsert: true });
+
+            if (uploadRes.error) throw new Error('Upload: ' + uploadRes.error.message);
+
+            /* ── Step3: 公開URLを取得して開く ── */
+            var urlRes = db.storage.from('orito-pdfs').getPublicUrl(pdfFileName);
+            var pdfUrl = urlRes.data.publicUrl;
+
+            updateStatus('✅ PDF発行完了！');
+            hideLoader();
+
+            /* LINE LIFF 内では外部ブラウザで開く、それ以外は新規タブ */
+            if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
+                liff.openWindow({ url: pdfUrl, external: true });
+            } else {
+                window.open(pdfUrl, '_blank');
+            }
+            alert('PDFを発行しました。\n開かない場合は外部ブラウザをご確認ください。');
+
+        } catch(e) {
+            hideLoader();
+            /* ── フォールバック: 直接ダウンロード ── */
+            try {
+                await html2pdf().from(document.getElementById('pdf-template')).set({
+                    margin: 0,
+                    filename: pdfFileName,
+                    image:       { type: 'jpeg', quality: 0.92 },
+                    html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+                    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                }).save();
+                alert('PDFを発行しました（ダウンロード）。');
+            } catch(e2) {
+                alert('PDF生成に失敗しました。\nStorage: ' + e.message + '\n直接DL: ' + e2.message);
+            }
+        }
     }
 
     function pdfSec(t) { return '<h3 style="color:#00B900;border-bottom:1px solid #ddd;padding-bottom:4px;">■ ' + t + '</h3>'; }
