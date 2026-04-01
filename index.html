@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8" />
-    <title>織杜 - 森林境界確定合意システム</title>
+    <title>織杜 - 森林境界・立木取引統合システム</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -11,620 +11,1241 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
-        :root { --green: #00B900; --web3: #8247E5; --red: #ff4757; --blue: #007bff; --bg: #f8f9fa; }
-        body { margin: 0; font-family: "Hiragino Mincho ProN", serif; background: var(--bg); color: #2d3436; overflow: hidden; height: 100vh; width: 100vw; }
-        .view { display: none; height: 100vh; flex-direction: column; overflow-y: auto; background: #fff; }
-        .view.active { display: flex; }
-        
+        :root {
+            --green:  #00B900;
+            --dgreen: #1a7a1a;
+            --web3:   #8247E5;
+            --red:    #ff4757;
+            --orange: #ffa502;
+            --brown:  #5D4037;
+            --bg:     #f0f4f0;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Hiragino Mincho ProN", serif;
+            background: var(--bg);
+            color: #2d3436;
+            overflow: hidden;
+            height: 100vh; width: 100vw;
+        }
+        .view { display: none; height: 100vh; flex-direction: column; background: #fff; overflow: hidden; }
+        .view.active { display: flex !important; }
+
+        /* ── 汎用パーツ ── */
+        .input-field {
+            width: 100%; padding: 16px;
+            border: 1px solid #ddd; border-radius: 12px;
+            margin-bottom: 12px; font-size: 16px; font-family: inherit;
+        }
+        .btn {
+            width: 100%; padding: 18px; border: none;
+            border-radius: 14px; font-weight: bold; font-size: 16px;
+            cursor: pointer; margin-top: 10px; transition: 0.2s; font-family: inherit;
+        }
+        .btn-primary { background: var(--green);  color: #fff; }
+        .btn-web3    { background: var(--web3);   color: #fff; }
+        .btn-view    { background: #2196F3;        color: #fff; }
+        .btn-sm      { padding: 10px 18px; font-size: 14px; width: auto; margin-top: 0; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ── ホーム ── */
+        #home-view { background: linear-gradient(160deg, #e8f5e9 0%, #f1f8e9 100%); }
+        .home-logo {
+            font-size: 36px; font-weight: bold; color: var(--dgreen);
+            letter-spacing: 4px; margin: 0;
+        }
+        .home-sub { color: #666; font-size: 13px; margin: 6px 0 50px; }
+        .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; }
+        .home-btn {
+            padding: 22px 10px; border: none; border-radius: 18px;
+            font-size: 14px; font-weight: bold; cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s; font-family: inherit;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .home-btn:active { transform: scale(0.96); }
+        .home-btn-boundary { background: linear-gradient(135deg,#00B900,#006600); color:#fff; }
+        .home-btn-timber   { background: linear-gradient(135deg,#8247E5,#4a1fa8); color:#fff; }
+        .home-btn-view     { background: linear-gradient(135deg,#1565C0,#0d47a1); color:#fff; }
+        .home-btn-init     {
+            background: none; border: 1px solid #ccc; color: #aaa;
+            font-size: 12px; padding: 8px; margin-top: 30px;
+            border-radius: 8px; width: auto; align-self: center;
+        }
+        .home-btn-icon { font-size: 30px; display: block; margin-bottom: 6px; }
+
+        /* ── 地図 ── */
         #map-area { flex: 1; position: relative; width: 100%; min-height: 40vh; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-        #detail-area { background: #fff; border-top: 5px solid var(--green); display: none; padding: 20px; overflow-y: auto; height: 60vh; border-radius: 20px 20px 0 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); }
+        #detail-area {
+            background: #fff; border-top: 5px solid var(--green);
+            display: none; overflow-y: auto; height: 60vh;
+            border-radius: 20px 20px 0 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.12);
+        }
         body.mode-split #detail-area { display: block; }
-        body.mode-split #map-area { flex: 0.4; }
+        body.mode-split #map-area    { flex: 0.4; }
 
-        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
-        .photo-item { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3; border: 3px solid #eee; transition: 0.3s; }
-        .photo-item.highlight { border-color: var(--blue); transform: scale(1.05); box-shadow: 0 0 15px rgba(0,123,255,0.4); z-index: 10; }
+        /* ── 写真グリッド ── */
+        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+        .photo-item { border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; border: 2px solid #eee; }
         .photo-item img { width: 100%; height: 100%; object-fit: cover; }
-        .photo-badge { position: absolute; top: 5px; left: 5px; background: var(--blue); color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 4px; font-family: sans-serif; }
 
-        .input-field { width: 100%; padding: 16px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 12px; font-size: 16px; box-sizing: border-box; font-family: sans-serif; }
-        .btn { width: 100%; padding: 18px; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; font-family: sans-serif; }
-        .btn-primary { background: var(--green); color: white; }
-        .btn-outline { background: transparent; color: #999; border: 1px solid #ddd; font-size: 11px; padding: 8px; margin-top: 30px; }
+        /* ── バッジ ── */
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        .badge-agreed  { background: #e8f9e8; color: var(--green); }
+        .badge-partial { background: #fff3e0; color: var(--orange); }
+        .badge-none    { background: #fff0f0; color: var(--red); }
+        .badge-viewer  { background: #e3f2fd; color: #1565C0; }
 
-        .method-toggle { display: flex; gap: 10px; margin-bottom: 20px; }
-        .m-btn { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 10px; background: #f9f9f9; font-size: 13px; color: #666; cursor: pointer; }
-        .m-btn.active { background: var(--web3); color: #fff; border-color: var(--web3); font-weight: bold; }
-        .sig-container { background: #f1f2f6; padding: 15px; border-radius: 15px; margin-bottom: 10px; }
-        .sig-box { border: 2px dashed #a4b0be; background: #fff; border-radius: 10px; touch-action: none; width: 100%; height: 150px; }
-        .toolbar { display: flex; justify-content: space-between; margin-top: 10px; }
-        .t-btn { padding: 8px 15px; font-size: 12px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; }
-        .t-btn.active { background: #2f3542; color: #fff; }
+        /* ── 署名 ── */
+        .sig-box {
+            border: 2px dashed #a4b0be; background: #fafafa;
+            border-radius: 10px; touch-action: none;
+            width: 100%; height: 200px; display: block; cursor: crosshair;
+        }
+        .mode-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+        .mode-tab {
+            flex: 1; padding: 10px; border: 2px solid #ddd;
+            border-radius: 10px; background: #fff; font-size: 14px;
+            font-weight: bold; cursor: pointer; font-family: inherit; transition: 0.2s;
+        }
+        .mode-tab.active { border-color: var(--green); background: #e8f9e8; color: var(--green); }
+        .tool-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .tool-btn {
+            padding: 8px 14px; border: 2px solid #ddd;
+            border-radius: 8px; background: #fff; font-size: 13px;
+            cursor: pointer; font-family: inherit; transition: 0.2s;
+        }
+        .tool-btn.active { border-color: var(--web3); background: #f0ebff; color: var(--web3); }
+        #seal-canvas { display: block; margin: 12px auto; border-radius: 50%; border: 1px solid #eee; }
 
-        /* ── プログレスオーバーレイ ── */
-        #pdf-progress {
+        /* ── レポート ── */
+        .report-header {
+            background: linear-gradient(135deg, var(--dgreen), var(--green));
+            padding: 18px 20px; color: #fff; flex-shrink: 0;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .report-back-btn {
+            background: rgba(255,255,255,0.25); border: none; color: #fff;
+            width: 36px; height: 36px; border-radius: 50%; font-size: 18px;
+            cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+        }
+        .report-scroll  { flex: 1; overflow-y: auto; padding: 20px; background: #f8f9fa; }
+        .report-footer  { flex-shrink: 0; padding: 16px 20px; background: #fff; border-top: 1px solid #eee; }
+        .report-section { margin-bottom: 22px; }
+        .report-title   { font-size: 12px; color: #666; letter-spacing: 1px; border-bottom: 2px solid var(--green); padding-bottom: 5px; margin-bottom: 10px; font-weight: bold; }
+        .info-row       { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+        .info-label     { color: #888; }
+        .info-value     { font-weight: bold; text-align: right; max-width: 60%; word-break: break-all; }
+
+        /* AI cards */
+        .ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .ai-card       { border-radius: 14px; padding: 14px; text-align: center; }
+        .ai-card-main  { background: linear-gradient(135deg,#f0f0ff,#e8e8ff); border: 2px solid #c5c5ff; grid-column: span 2; }
+        .ai-card-risk  { background: linear-gradient(135deg,#fff1f0,#ffe4e1); border: 2px solid #ffb8b0; }
+        .ai-card-stable{ background: linear-gradient(135deg,#f0fff4,#dcffe4); border: 2px solid #87d068; }
+        .ai-value-main { font-size: 22px; font-weight: bold; color: #4040cc; margin: 6px 0; }
+        .ai-value-risk { font-size: 18px; font-weight: bold; color: #cf1322; margin: 6px 0; }
+        .ai-value-stable{font-size: 18px; font-weight: bold; color: #389e0d; margin: 6px 0; }
+        .ai-sublabel   { font-size: 10px; color: #888; }
+        .ai-carbon-box { background: #fffbe6; border: 1px solid #ffe58f; border-radius: 10px; padding: 12px; margin-top: 12px; font-size: 12px; color: #614700; }
+
+        /* アクセス制限バナー */
+        .access-denied {
+            background: linear-gradient(135deg, #1a237e, #283593);
+            color: #fff; border-radius: 14px; padding: 24px; text-align: center; margin: 20px 0;
+        }
+        .access-denied-icon { font-size: 40px; margin-bottom: 10px; }
+        .share-code-box {
+            background: #e8f5e9; border: 2px solid var(--green); border-radius: 12px;
+            padding: 16px; margin: 12px 0; text-align: center;
+        }
+        .share-code    { font-size: 22px; font-weight: bold; letter-spacing: 4px; color: var(--dgreen); margin: 6px 0; }
+
+        /* ── 森林テーマローディング ── */
+        #forest-loader {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); display: none; align-items: center;
-            justify-content: center; z-index: 10000; flex-direction: column;
-            color: #fff; text-align: center; padding: 30px; box-sizing: border-box;
+            background: linear-gradient(160deg, #0a2e0a 0%, #1b4332 40%, #081c08 100%);
+            display: none; align-items: center; justify-content: center;
+            z-index: 10000; flex-direction: column; overflow: hidden;
         }
-        .loader-web3 {
-            width: 60px; height: 60px; border: 4px solid var(--web3);
-            border-top-color: transparent; border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 20px;
+        .leaf-particle {
+            position: absolute; width: 10px; height: 10px;
+            border-radius: 0 50% 0 50%;
+            animation: leafFall linear infinite;
+            pointer-events: none;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        #progress-status { font-size: 13px; color: #aaa; margin-top: 15px; font-family: monospace; max-width: 320px; word-break: break-all; }
-        #error-box { display:none; margin-top:16px; padding:12px 16px; background:#3a0000; border:1px solid var(--red); border-radius:10px; font-family:monospace; font-size:11px; color:#ff9999; max-width:320px; text-align:left; word-break:break-all; }
-        #pdf-download-btn { display: none; margin-top: 20px; padding: 16px 30px; background: var(--green); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        #reload-btn { display:none; margin-top:12px; padding:12px 24px; background:transparent; color:#aaa; border:1px solid #555; border-radius:10px; font-size:14px; cursor:pointer; }
+        @keyframes leafFall {
+            0%   { top: -30px; transform: rotate(0deg) translateX(0);   opacity: 0.9; }
+            50%  { transform: rotate(200deg) translateX(25px); }
+            100% { top: 110vh; transform: rotate(400deg) translateX(-15px); opacity: 0; }
+        }
+        .tree-wrap { position: relative; z-index: 2; }
+        .tree-svg .trunk  { animation: growUp 0.9s cubic-bezier(.25,1,.5,1) both; transform-origin: 50% 100%; }
+        .tree-svg .leaf3  { animation: popIn 0.5s 0.6s cubic-bezier(.25,1,.5,1) both; }
+        .tree-svg .leaf2  { animation: popIn 0.5s 0.8s cubic-bezier(.25,1,.5,1) both; }
+        .tree-svg .leaf1  { animation: popIn 0.5s 1.0s cubic-bezier(.25,1,.5,1) both; }
+        @keyframes growUp  { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+        @keyframes popIn   { from { opacity:0; transform: scale(0.3); } to { opacity:1; transform: scale(1); } }
+        .orito-label {
+            font-size: 22px; font-weight: bold; letter-spacing: 5px;
+            color: #a5d6a7; margin-top: 20px; z-index: 2;
+        }
+        #status-text {
+            font-size: 13px; color: #81c784; margin-top: 10px;
+            font-family: monospace; z-index: 2; min-height: 20px; text-align: center;
+        }
+        .progress-steps {
+            display: flex; gap: 6px; margin-top: 16px; z-index: 2;
+        }
+        .progress-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(165,214,167,0.3); transition: background 0.4s;
+        }
+        .progress-dot.done { background: #a5d6a7; }
+
+        /* ── 初期化モーダル ── */
+        #reset-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: none; align-items: center;
+            justify-content: center; z-index: 9999;
+        }
+        .reset-card {
+            background: #fff; border-radius: 20px; padding: 30px;
+            width: 85%; max-width: 360px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        /* PDF overlay */
+        #pdf-overlay { position: fixed; top: 0; left: -30000px; width: 210mm; font-family: "Hiragino Mincho ProN", serif; }
     </style>
 </head>
 <body>
 
-<div id="pdf-progress">
-    <div class="loader-web3" id="progress-spinner"></div>
-    <div id="progress-text" style="color:var(--web3); font-weight:bold; font-size:20px; letter-spacing:2px;">CONSENSUS CORE</div>
-    <div id="progress-status">処理を開始しています...</div>
-    <div id="error-box"></div>
-    <button id="pdf-download-btn">📄 証明書をダウンロード</button>
-    <button id="reload-btn">閉じる</button>
-</div>
+<!-- ════════════════════════════════════════════
+     森林テーマ ローディングオーバーレイ
+════════════════════════════════════════════ -->
+<div id="forest-loader">
+    <!-- 落ち葉パーティクル (JSで生成) -->
+    <div id="leaf-container"></div>
 
-<div id="entry-view" class="view active" style="align-items:center; justify-content:center; padding:40px;">
-    <h1 style="color:var(--green); font-size:32px; margin:0;">織杜 ORITO</h1>
-    <p style="color:#666; font-size:14px; margin-bottom:40px;">森林境界確定合意リレー</p>
-    <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:26px; letter-spacing:6px;" placeholder="CODE001">
-    <button class="btn btn-primary" id="btn-verify">調査台帳を開く</button>
-    <button class="btn btn-outline" id="btn-reset">🗑 デモ用：全データ初期化</button>
-</div>
-
-<div id="kyc-view" class="view" style="padding:30px;">
-    <h2 style="border-left:5px solid var(--green); padding-left:15px;">当事者確認</h2>
-    <p id="role-label" style="font-weight:bold; color:var(--web3); padding:10px; background:#f0ebff; border-radius:8px;"></p>
-    <p style="font-size:12px; color:#666; margin-top:20px;">証明書に記載される現住所を入力してください。</p>
-    <input type="text" id="current-address" class="input-field" placeholder="宮崎県宮崎市...">
-    <div style="background:#f8f9fa; padding:20px; border-radius:15px; border:1px solid #eee; text-align:center; margin-top:10px;">
-        <p style="font-size:12px; font-weight:bold; margin-bottom:15px;">本人確認書類（免許証等）の撮影</p>
-        <button class="btn" style="background:#fff; border:1px solid #ddd; padding:12px;" id="btn-kyc-cam">📷 カメラを起動</button>
-        <input type="file" id="file-kyc" accept="image/*" capture="environment" style="display:none">
-        <img id="preview-kyc" style="width:100%; margin-top:15px; display:none; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+    <div class="tree-wrap">
+        <svg class="tree-svg" viewBox="0 0 100 140" width="90" height="126">
+            <rect class="trunk" x="44" y="88" width="12" height="52" rx="4" fill="#5D4037"/>
+            <polygon class="leaf3" points="50,45 12,100 88,100" fill="#1B5E20"/>
+            <polygon class="leaf2" points="50,25 18,82 82,82"  fill="#2E7D32"/>
+            <polygon class="leaf1" points="50,5  24,65 76,65"  fill="#43A047"/>
+            <polygon points="50,10 38,45 62,45" fill="rgba(255,255,255,0.07)"/>
+        </svg>
     </div>
-    <button class="btn btn-primary" id="btn-go-map">境界調査図を確認する</button>
+
+    <div class="orito-label">ORITO CORE</div>
+    <div id="status-text">🌱 起動中...</div>
+    <div class="progress-steps" id="progress-steps">
+        <div class="progress-dot" id="dot0"></div>
+        <div class="progress-dot" id="dot1"></div>
+        <div class="progress-dot" id="dot2"></div>
+        <div class="progress-dot" id="dot3"></div>
+        <div class="progress-dot" id="dot4"></div>
+    </div>
 </div>
 
+<!-- ════════════════════════════════════════════
+     初期化モーダル
+════════════════════════════════════════════ -->
+<div id="reset-modal">
+    <div class="reset-card">
+        <h3 style="margin:0 0 6px;">🔄 データ初期化</h3>
+        <p style="font-size:12px; color:#888; margin:0 0 20px;">署名・合意状況・閲覧権限をリセットします</p>
+        <input type="text"     id="reset-code" class="input-field" placeholder="招待コード（例：ADMIN001）">
+        <input type="password" id="reset-pwd"  class="input-field" placeholder="管理者パスワード">
+        <button class="btn btn-primary" id="btn-reset-exec" style="background:var(--red);">初期化を実行</button>
+        <button class="btn" style="background:#f1f2f6;" id="btn-reset-cancel">キャンセル</button>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     ① ホーム画面
+════════════════════════════════════════════ -->
+<div id="home-view" class="view active">
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:36px;">
+        <div style="margin-bottom:8px; font-size:48px;">🌲</div>
+        <h1 class="home-logo">織杜 ORITO</h1>
+        <p class="home-sub">森林境界・立木取引 DXプラットフォーム</p>
+
+        <div class="home-grid">
+            <button class="home-btn home-btn-boundary" id="btn-boundary">
+                <span class="home-btn-icon">📍</span>境界確定合意
+            </button>
+            <button class="home-btn home-btn-timber" id="btn-timber">
+                <span class="home-btn-icon">🌲</span>立木売買契約
+            </button>
+            <button class="home-btn home-btn-view" id="btn-view" style="grid-column:span 2;">
+                <span class="home-btn-icon">👁️</span>森林レポート閲覧
+                <div style="font-size:10px; margin-top:4px; opacity:0.8;">所有者許可コード入力</div>
+            </button>
+        </div>
+
+        <button class="home-btn-init" id="btn-show-reset">🔄 管理者初期化</button>
+    </div>
+</div>
+
+<!-- ② 招待コード -->
+<div id="entry-view" class="view">
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; overflow-y:auto;">
+        <div id="entry-tag" style="display:inline-block; padding:4px 14px; border-radius:20px; font-size:11px; font-weight:bold; margin-bottom:10px; color:#fff;"></div>
+        <h2 style="margin-bottom:8px;" id="entry-title">コードを入力</h2>
+        <p id="entry-desc" style="font-size:13px; color:#888; margin-bottom:20px; text-align:center;"></p>
+        <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:26px; letter-spacing:5px;" placeholder="ADMIN001">
+        <button class="btn btn-primary" id="entry-next-btn">照会する</button>
+        <button class="btn" style="background:#f1f2f6; margin-top:14px;" id="btn-back">← 戻る</button>
+    </div>
+</div>
+
+<!-- ③ KYC -->
+<div id="kyc-view" class="view">
+    <div style="flex:1; overflow-y:auto; padding:30px;">
+        <h2>当事者確認</h2>
+        <p id="role-label" style="font-weight:bold; color:var(--web3); padding:10px; background:#f0ebff; border-radius:8px;"></p>
+        <input type="text" id="current-address" class="input-field" placeholder="現住所を入力してください">
+        <button class="btn btn-primary" id="btn-show-map">地図を表示</button>
+    </div>
+</div>
+
+<!-- ④ 地図 -->
 <div id="map-view" class="view">
     <div id="map-area"><div id="map"></div></div>
     <div id="detail-area">
-        <h3 id="parcel-title" style="margin:0 0 15px 0;">物件：確認中</h3>
-        <div id="photo-list" class="photo-grid"></div>
-        <textarea id="owner-msg" class="input-field" style="height:80px;" placeholder="特記事項・メッセージがあれば入力してください"></textarea>
-        <button id="agree-btn-nav" class="btn btn-primary">最終合意（署名）へ</button>
-        <button class="btn" style="background:#f1f2f6;" id="btn-close-detail">✕ 地図に戻る</button>
+        <div style="padding:14px 18px 0; display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+                <h3 id="parcel-title" style="margin:0 0 4px; font-size:16px;">物件情報</h3>
+                <div id="parcel-status-badge"></div>
+                <p id="parcel-info" style="font-size:12px; color:#888; margin:4px 0 0;"></p>
+            </div>
+            <button id="btn-close-detail" style="border:none; background:none; font-size:22px; cursor:pointer; color:#aaa;">✕</button>
+        </div>
+        <div style="padding:0 18px 18px;" id="detail-actions">
+            <div id="photo-list" class="photo-grid"></div>
+            <!-- アクセスレベルにより動的表示 -->
+        </div>
     </div>
 </div>
 
-<div id="agree-view" class="view" style="padding:30px;">
-    <h2>最終合意署名</h2>
-    <div class="method-toggle">
-        <button id="m-hand" class="m-btn active">手書き署名</button>
-        <button id="m-digital" class="m-btn">電子認証印</button>
+<!-- ⑤ 立木売買 -->
+<div id="timber-view" class="view">
+    <div style="flex:1; overflow-y:auto; padding:30px;">
+        <h2>売買条件の確認</h2>
+        <div style="background:#f8f9fa; padding:15px; border-radius:12px; margin-bottom:20px;">
+            <p><strong>対象地番：</strong><span id="t-parcel"></span></p>
+            <p><strong>面積：</strong><span id="t-area"></span> ha</p>
+        </div>
+        <input type="number" id="trade-price"    class="input-field" placeholder="売買代金を入力">
+        <input type="date"   id="logging-deadline" class="input-field">
+        <button class="btn btn-web3" id="btn-timber-agree">契約署名へ</button>
     </div>
-    <div id="hand-area">
-        <div class="sig-container">
+</div>
+
+<!-- ⑥ 署名 -->
+<div id="agree-view" class="view">
+    <div style="flex:1; overflow-y:auto; padding:24px;">
+        <h2 style="margin-top:0;">最終署名</h2>
+        <div class="mode-tabs">
+            <button class="mode-tab active" id="tab-handwrite">✏️ 手書き</button>
+            <button class="mode-tab" id="tab-seal">🔴 電子印影</button>
+        </div>
+
+        <div id="handwrite-area">
+            <div class="tool-row">
+                <button class="tool-btn active" id="tool-pen">🖊️ ペン</button>
+                <button class="tool-btn" id="tool-eraser">🧹 消しゴム</button>
+            </div>
             <canvas id="sig-canvas" class="sig-box"></canvas>
-            <div class="toolbar">
-                <div style="display:flex; gap:8px;">
-                    <button id="t-pen" class="t-btn active">🖋 ペン</button>
-                    <button id="t-eraser" class="t-btn">🧽 消しゴム</button>
+        </div>
+
+        <div id="seal-area" style="display:none;">
+            <div class="mode-tabs" style="margin-bottom:14px;">
+                <button class="mode-tab active" id="tab-seal-gen">自動生成</button>
+                <button class="mode-tab" id="tab-seal-upload">画像アップロード</button>
+            </div>
+            <div id="seal-gen-area">
+                <input type="text" id="seal-name" class="input-field" placeholder="氏名を入力（例：山田太郎）" maxlength="6">
+                <button class="btn btn-sm" style="background:#f1f2f6;" id="btn-gen-seal">印影を生成</button>
+                <canvas id="seal-canvas" width="160" height="160"></canvas>
+            </div>
+            <div id="seal-upload-area" style="display:none;">
+                <input type="file" id="seal-upload-input" accept="image/*" style="display:none;">
+                <button class="btn" style="background:#f1f2f6; margin-top:0;" id="btn-select-seal">🖼️ 印影画像を選択</button>
+                <div id="seal-preview-wrap" style="text-align:center; margin-top:15px; display:none;">
+                    <img id="seal-preview-img" style="max-width:160px; border-radius:50%; border:2px solid #ddd;" />
                 </div>
-                <button class="t-btn" style="color:var(--red);" id="btn-clear-sig">全消去</button>
             </div>
         </div>
+
+        <button class="btn btn-primary" id="final-btn" style="margin-top:20px;">確定して保存</button>
+        <button class="btn" style="background:#f1f2f6;" id="btn-clear-sig">🗑️ 全削除</button>
     </div>
-    <div id="digital-area" style="display:none;">
-        <div class="sig-container" style="padding:40px 0; text-align:center;">
-            <div id="stamp-preview" style="width:100px; height:100px; border:3px solid #ff4757; border-radius:50%; margin:0 auto; display:flex; align-items:center; justify-content:center; color:#ff4757; font-size:36px; font-weight:bold; background:#fff;">印</div>
-            <p style="font-size:12px; color:#666; margin-top:20px;">LINE IDと連携した暗号認証印を生成します</p>
-        </div>
-    </div>
-    <button class="btn btn-primary" style="background:var(--web3); box-shadow:0 4px 15px rgba(130,71,229,0.3);" id="btn-finalize">ブロックチェーンに合意を刻印</button>
 </div>
 
-<div id="pdf-overlay" style="position:fixed; top:0; left:-20000px; width:210mm;"><div id="pdf-template"></div></div>
+<!-- ⑦ 森林レポート -->
+<div id="report-view" class="view">
+    <div class="report-header">
+        <button class="report-back-btn" id="btn-back-report">←</button>
+        <div>
+            <div style="font-size:10px; letter-spacing:2px; opacity:0.8;">ORITO FOREST REPORT</div>
+            <div style="font-size:17px; font-weight:bold;" id="report-title">-</div>
+        </div>
+        <div id="access-badge-report" style="margin-left:auto;"></div>
+    </div>
+    <div class="report-scroll" id="report-content"></div>
+    <div class="report-footer">
+        <button class="btn btn-web3" id="btn-generate-pdf" disabled>📄 PDFを発行</button>
+        <p id="pdf-status-msg" style="text-align:center; font-size:11px; color:#aaa; margin:6px 0 0;"></p>
+    </div>
+</div>
 
+<!-- PDF テンプレート -->
+<div id="pdf-overlay"><div id="pdf-template"></div></div>
+
+<!-- ════════════════════════════════════════════
+     JavaScript
+════════════════════════════════════════════ -->
 <script>
 (function () {
     'use strict';
 
-    var DB = window.supabase.createClient(
-        'https://uggpclqqyaailuadgzxv.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnZ3BjbHFxeWFhaWx1YWRnenh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MzE0NTgsImV4cCI6MjA5MDEwNzQ1OH0.jY5jJuJUgwbIZm8y-jJvEH27eAP9m9semR3MbLxVxGo'
-    );
+    /* ─── Supabase ─── */
+    var S_URL = 'https://uggpclqqyaailuadgzxv.supabase.co';
+    var S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnZ3BjbHFxeWFhaWx1YWRnenh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MzE0NTgsImV4cCI6MjA5MDEwNzQ1OH0.jY5jJuJUgwbIZm8y-jJvEH27eAP9m9semR3MbLxVxGo';
+    var db = window.supabase.createClient(S_URL, S_KEY);
 
-    var targetData = null, mapInstance = null, sigCtx = null;
-    var lineUserId = "", isOwner = true, sigMethod = 'hand', currentTool = 'pen';
-    var pdfPublicUrl = "";
-    // 甲のLINE User ID（甲が署名時にDBへ保存、乙の処理完了時にPush送信に使う）
-    var ownerLineUserId = "";
+    /* ─── 管理者設定 ─── */
+    var ADMIN_PASSWORD = 'ORITO2026';          // ※本番環境では変更してください
+    var VIEW_SUFFIX    = '-V';                 // 閲覧コードのサフィックス
 
-    // ─── LIFF ───────────────────────────────────────────────
-    async function initLIFF() {
-        try {
-            await liff.init({ liffId: "2009576392-CvuNETRQ" });
-            if (liff.isLoggedIn()) lineUserId = (await liff.getProfile()).userId;
-        } catch (e) { console.warn("LIFF:", e); }
+    /* ─── アクセスレベル ─── */
+    var ACCESS_NONE        = 0; // アクセス不可
+    var ACCESS_VIEWER      = 1; // 閲覧のみ（所有者が許可）
+    var ACCESS_PARTICIPANT = 2; // 署名者（乙）
+    var ACCESS_OWNER       = 3; // 所有者（甲）全権
+
+    /* ─── 状態変数 ─── */
+    var targetData      = null;
+    var mapInstance     = null;
+    var sigCtx          = null;
+    var currentMode     = 'boundary'; // 'boundary' | 'timber' | 'view'
+    var isOwner         = true;
+    var accessLevel     = ACCESS_PARTICIPANT;
+    var currentTool     = 'pen';
+    var currentSigMode  = 'handwrite';
+    var currentSealMode = 'gen';
+    var uploadedSealUrl = null;
+    var sealGenerated   = false;
+    var progressStep    = 0;
+    var progressTimer   = null;
+
+    /* ══════════════════════════════════════════
+       ローディング演出
+    ══════════════════════════════════════════ */
+    var FOREST_MSGS = [
+        '🌱 起動中...',
+        '🌿 台帳を照合中...',
+        '🌳 地図データを取得中...',
+        '🍃 ブロックチェーンに接続中...',
+        '🔒 認証を処理中...'
+    ];
+
+    function buildLeaves() {
+        var container = document.getElementById('leaf-container');
+        var colors = ['#4CAF50','#66BB6A','#81C784','#A5D6A7','#388E3C','#2E7D32'];
+        for (var i = 0; i < 18; i++) {
+            var leaf = document.createElement('div');
+            leaf.className = 'leaf-particle';
+            var left = Math.random() * 100;
+            var dur  = 4 + Math.random() * 6;
+            var del  = -Math.random() * 8;
+            var size = 7 + Math.random() * 9;
+            leaf.style.cssText =
+                'left:' + left + 'vw;' +
+                'width:' + size + 'px;height:' + size + 'px;' +
+                'background:' + colors[Math.floor(Math.random() * colors.length)] + ';' +
+                'animation-duration:' + dur + 's;' +
+                'animation-delay:' + del + 's;' +
+                'opacity:' + (0.5 + Math.random() * 0.5) + ';';
+            container.appendChild(leaf);
+        }
     }
 
-    // ─── ビュー ──────────────────────────────────────────────
+    function showLoader() {
+        var el = document.getElementById('forest-loader');
+        el.style.display = 'flex';
+        progressStep = 0;
+        buildLeaves();
+        progressTimer = setInterval(function () {
+            updateStatus(FOREST_MSGS[progressStep % FOREST_MSGS.length]);
+            var dot = document.getElementById('dot' + progressStep);
+            if (dot) dot.classList.add('done');
+            progressStep++;
+            if (progressStep >= 5) { clearInterval(progressTimer); progressTimer = null; }
+        }, 600);
+    }
+
+    function hideLoader() {
+        if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+        document.getElementById('forest-loader').style.display = 'none';
+        document.getElementById('leaf-container').innerHTML = '';
+        for (var i = 0; i < 5; i++) {
+            var dot = document.getElementById('dot' + i);
+            if (dot) dot.classList.remove('done');
+        }
+    }
+
+    function updateStatus(t) {
+        var el = document.getElementById('status-text');
+        if (el) el.innerText = t;
+    }
+
+    /* ══════════════════════════════════════════
+       ユーティリティ
+    ══════════════════════════════════════════ */
+    function formatYen(n) { return '¥' + Math.round(n).toLocaleString('ja-JP'); }
+
+    function getPhotos(data) {
+        var p = data.photos || data.photo_urls || data.photo_url || [];
+        if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { p = p ? [p] : []; } }
+        return Array.isArray(p) ? p : (p ? [p] : []);
+    }
+
+    function getStatusBadge(data) {
+        if (data.is_agreed || (data.sig_a_done && data.sig_b_done))
+            return '<span class="status-badge badge-agreed">✅ 合意済み</span>';
+        if (data.sig_a_done)
+            return '<span class="status-badge badge-partial">🟡 甲署名済み</span>';
+        return '<span class="status-badge badge-none">🔴 未署名</span>';
+    }
+
     function changeView(id) {
-        document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('active'); });
-        var el = document.getElementById(id);
-        if (!el) return;
-        el.classList.add('active');
-        if (id === 'map-view') setTimeout(initMap, 300);
-        if (id === 'agree-view') setTimeout(initCanvas, 500);
+        document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+        var next = document.getElementById(id);
+        if (!next) return;
+        next.classList.add('active');
+        if (id === 'map-view')    setTimeout(initMap, 300);
+        if (id === 'agree-view')  setTimeout(initCanvas, 400);
+        if (id === 'report-view') populateReport();
     }
 
-    // ─── 招待コード ──────────────────────────────────────────
+    /* ══════════════════════════════════════════
+       アクセス制御ヘルパー
+    ══════════════════════════════════════════ */
+    function canSeeLocation() { return accessLevel >= ACCESS_VIEWER; }
+    function canSeeReport()   { return accessLevel >= ACCESS_VIEWER; }
+    function canSign()        { return accessLevel >= ACCESS_PARTICIPANT; }
+    function isOwnerAccess()  { return accessLevel === ACCESS_OWNER; }
+
+    function getAccessLabel() {
+        if (accessLevel === ACCESS_OWNER)       return '<span class="status-badge badge-agreed">👑 所有者</span>';
+        if (accessLevel === ACCESS_VIEWER)      return '<span class="status-badge badge-viewer">👁️ 閲覧者</span>';
+        if (accessLevel === ACCESS_PARTICIPANT) return '<span class="status-badge badge-partial">✏️ 署名者（乙）</span>';
+        return '';
+    }
+
+    /* ══════════════════════════════════════════
+       モード選択・エントリー画面
+    ══════════════════════════════════════════ */
+    function selectMode(mode) {
+        currentMode = mode;
+        var tag  = document.getElementById('entry-tag');
+        var title = document.getElementById('entry-title');
+        var desc  = document.getElementById('entry-desc');
+
+        if (mode === 'boundary') {
+            tag.innerText = '境界確定モード';
+            tag.style.background = 'var(--green)';
+            title.innerText = '招待コードを入力';
+            desc.innerText  = '甲（所有者）または乙（隣接所有者）として参加します';
+        } else if (mode === 'timber') {
+            tag.innerText = '立木取引モード';
+            tag.style.background = 'var(--web3)';
+            title.innerText = '招待コードを入力';
+            desc.innerText  = '立木売買の当事者として参加します';
+        } else if (mode === 'view') {
+            tag.innerText = '閲覧モード';
+            tag.style.background = '#1565C0';
+            title.innerText = '閲覧コードを入力';
+            desc.innerText  = '所有者から共有された閲覧コード（末尾が "-V"）を入力してください';
+        }
+        changeView('entry-view');
+    }
+
+    /* ══════════════════════════════════════════
+       招待コード照会
+    ══════════════════════════════════════════ */
     async function verifyCode() {
-        var code = document.getElementById('invite-input').value.toUpperCase().trim();
-        if (!code) return alert("コードを入力してください。");
-        var res = await DB.from('forest_plots').select('*').eq('invitation_code', code).single();
-        if (res.error || !res.data) return alert("無効な招待コードです。");
-        targetData = res.data;
-        isOwner = !targetData.sig_a_done;
-        document.getElementById('role-label').innerText = isOwner ? "役割：土地所有者（甲）" : "役割：隣接所有者（乙）";
-        document.getElementById('current-address').value = isOwner ? (targetData.owner_address || "") : (targetData.adjacent_address || "");
-        var isFull = targetData.sig_a_done && targetData.sig_b_done;
-        document.getElementById('agree-btn-nav').style.display = isFull ? 'none' : 'block';
-        changeView('kyc-view');
+        var raw  = document.getElementById('invite-input').value.toUpperCase().trim();
+        var isViewCode = raw.endsWith(VIEW_SUFFIX);
+        var code = isViewCode ? raw.slice(0, -VIEW_SUFFIX.length) : raw;
+
+        showLoader();
+        try {
+            /* 甲コード(invitation_code) を先に照合 */
+            var res = await db.from('forest_plots')
+                .select('*')
+                .eq('invitation_code', code)
+                .maybeSingle();
+
+            /* 見つからなければ 乙コード(adjacent_code) で照合 */
+            if (!res.data && !res.error) {
+                res = await db.from('forest_plots')
+                    .select('*')
+                    .eq('adjacent_code', code)
+                    .maybeSingle();
+            }
+
+            if (res.error || !res.data) {
+                hideLoader();
+                var errDetail = res.error ? '\n[詳細: ' + res.error.message + ']' : '';
+                alert('無効なコードです。\n・甲（所有者）コード：招待コードをそのまま入力\n・乙（隣接者）コード：管理者から発行された乙用コード\n・閲覧コード：招待コード末尾に "-V" を付加' + errDetail);
+                return;
+            }
+            targetData = res.data;
+
+            /* アクセスレベル判定 — どちらのコードで一致したかで役割を決める */
+            if (isViewCode || currentMode === 'view') {
+                accessLevel = ACCESS_VIEWER;
+                isOwner     = false;
+            } else if (targetData.invitation_code === code) {
+                /* 甲（所有者）コードで一致 */
+                accessLevel = ACCESS_OWNER;
+                isOwner     = true;
+            } else {
+                /* 乙（隣接者）コードで一致 */
+                accessLevel = ACCESS_PARTICIPANT;
+                isOwner     = false;
+            }
+
+            hideLoader();
+
+            /* 遷移先 */
+            if (currentMode === 'view' || isViewCode) {
+                changeView('map-view');
+                setTimeout(showDetailPanel, 500);
+            } else if (currentMode === 'timber') {
+                document.getElementById('t-parcel').innerText = targetData.parcel_number;
+                document.getElementById('t-area').innerText   = targetData.area_ha;
+                changeView('timber-view');
+            } else {
+                document.getElementById('role-label').innerText =
+                    isOwner ? '役割：土地所有者（甲）' : '役割：隣接所有者（乙）';
+                changeView('kyc-view');
+            }
+        } catch(e) {
+            hideLoader();
+            alert('エラーが発生しました: ' + e.message);
+        }
     }
 
-    async function resetDemoData() {
-        if (!confirm("全ての地筆の署名データを初期化します。よろしいですか？")) return;
-        setStatus("データを初期化中...");
-        showOverlay(true);
-        // コード指定なし → forest_plots 全レコードを初期化
-        var res = await DB.from('forest_plots').update({
-            sig_a_done: false, sig_a_data: null, owner_address: null, owner_requests: null,
-            owner_line_user_id: null,
-            sig_b_done: false, sig_b_data: null, adjacent_address: null, is_agreed: null
-        }).neq('id', '00000000-0000-0000-0000-000000000000'); // 全行対象（ダミー条件）
-        if (res.error) { showError("初期化失敗:\n" + JSON.stringify(res.error)); return; }
-        location.reload();
+    function showDetailPanel() {
+        document.getElementById('parcel-title').innerText       = targetData.parcel_number;
+        document.getElementById('parcel-info').innerText        = '面積：' + targetData.area_ha + ' ha';
+        document.getElementById('parcel-status-badge').innerHTML = getStatusBadge(targetData);
+        loadPhotos(targetData);
+        renderDetailActions();
+        document.body.classList.add('mode-split');
+        setTimeout(function() { if (mapInstance) mapInstance.resize(); }, 300);
     }
 
-    // ─── 地図 ────────────────────────────────────────────────
+    function renderDetailActions() {
+        var el = document.getElementById('detail-actions');
+        var html = '';
+
+        if (canSeeReport()) {
+            html += '<button class="btn btn-web3" id="btn-to-report" style="margin-top:0;">📊 森林レポート・PDF発行</button>';
+        }
+        if (canSign()) {
+            html += '<button class="btn btn-primary" id="btn-to-agree">✏️ 署名ステップへ</button>';
+        }
+        if (!canSeeReport() && !canSign()) {
+            html += '<div class="access-denied">' +
+                    '<div class="access-denied-icon">🔒</div>' +
+                    '<div style="font-weight:bold;">アクセス制限</div>' +
+                    '<div style="font-size:12px; opacity:0.8; margin-top:6px;">詳細レポートと所在地の閲覧は<br>所有者の許可が必要です</div>' +
+                    '</div>';
+        }
+
+        // 既存ボタンのイベントを消してから差し替え
+        var old = el.querySelector('#btn-to-report');
+        if (old) old.remove();
+        var old2 = el.querySelector('#btn-to-agree');
+        if (old2) old2.remove();
+
+        // photo-listの後に追加
+        var photoList = el.querySelector('#photo-list');
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = html;
+        el.appendChild(wrapper);
+
+        var r = el.querySelector('#btn-to-report');
+        if (r) r.addEventListener('click', function() { changeView('report-view'); });
+        var a = el.querySelector('#btn-to-agree');
+        if (a) a.addEventListener('click', function() { changeView('agree-view'); });
+    }
+
+    /* ══════════════════════════════════════════
+       写真読み込み
+    ══════════════════════════════════════════ */
+    function loadPhotos(data) {
+        var container = document.getElementById('photo-list');
+        container.innerHTML = '';
+        var photos = getPhotos(data);
+        if (photos.length === 0) {
+            container.innerHTML = '<p style="color:#bbb;font-size:12px;text-align:center;grid-column:span 2;padding:8px 0;">写真なし</p>';
+            return;
+        }
+        photos.forEach(function(url) {
+            var div = document.createElement('div');
+            div.className = 'photo-item';
+            var img = document.createElement('img');
+            img.src = url;
+            img.onerror = function() { div.style.display = 'none'; };
+            div.appendChild(img);
+            container.appendChild(div);
+        });
+    }
+
+    /* ══════════════════════════════════════════
+       地図初期化
+    ══════════════════════════════════════════ */
     function initMap() {
         if (mapInstance) return;
         mapInstance = new maplibregl.Map({
             container: 'map',
-            style: { "version": 8, "sources": { "gsi": { "type": "raster", "tiles": ["https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"], "tileSize": 256 } }, "layers": [{ "id": "gsi", "type": "raster", "source": "gsi" }] },
-            center: [131.39, 31.99], zoom: 17, preserveDrawingBuffer: true
+            style: {
+                version: 8,
+                sources: { gsi: { type: 'raster', tiles: ['https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg'], tileSize: 256 } },
+                layers:  [{ id: 'gsi', type: 'raster', source: 'gsi' }]
+            },
+            center: [131.39, 31.99], zoom: 16, preserveDrawingBuffer: true
         });
-        mapInstance.on('load', async function () {
-            var result = await DB.rpc('get_forest_geojson');
-            if (!result.data || !result.data.features) return;
-            var code = document.getElementById('invite-input').value.toUpperCase().trim();
-            var filtered = result.data.features.filter(function (f) { return f.properties.invitation_code === code; });
-            var colorExpr = ['case', ['all', ['==', ['get', 'sig_a_done'], true], ['==', ['get', 'sig_b_done'], true]], '#00B900', ['==', ['get', 'sig_a_done'], true], '#FFD32A', '#ff4757'];
-            mapInstance.addSource('plot-src', { 'type': 'geojson', 'data': { type: "FeatureCollection", features: filtered } });
-            mapInstance.addLayer({ 'id': 'fill', 'type': 'fill', 'source': 'plot-src', 'paint': { 'fill-opacity': 0.3, 'fill-color': colorExpr } });
-            mapInstance.addLayer({ 'id': 'line', 'type': 'line', 'source': 'plot-src', 'paint': { 'line-color': colorExpr, 'line-width': 5 } });
+
+        mapInstance.on('load', async function() {
+            var res = await db.rpc('get_forest_geojson');
+            if (!res.data || !res.data.features) return;
+
+            var filtered = res.data.features.filter(function(f) {
+                return f.properties.invitation_code === targetData.invitation_code;
+            });
+
+            mapInstance.addSource('plot-src', { type: 'geojson', data: { type: 'FeatureCollection', features: filtered } });
+
+            /* ステータスで色分け */
+            mapInstance.addLayer({
+                id: 'fill', type: 'fill', source: 'plot-src',
+                paint: {
+                    'fill-opacity': 0.55,
+                    'fill-color': [
+                        'case',
+                        ['boolean', ['get', 'is_agreed'],   false], '#00B900',
+                        ['boolean', ['get', 'sig_a_done'], false], '#FFA502',
+                        '#FF4757'
+                    ]
+                }
+            });
+            mapInstance.addLayer({
+                id: 'outline', type: 'line', source: 'plot-src',
+                paint: { 'line-color': '#fff', 'line-width': 2.5, 'line-opacity': 0.85 }
+            });
+
             if (filtered[0]) {
-                var photos = getUrls(targetData.evidence_photo_url);
-                var coords = filtered[0].geometry.type === 'MultiPolygon' ? filtered[0].geometry.coordinates[0][0] : filtered[0].geometry.coordinates[0];
-                var pts = photos.map(function (u, i) { return { "type": "Feature", "geometry": { "type": "Point", "coordinates": coords[Math.floor((i / photos.length) * (coords.length - 1))] }, "properties": { "idx": (i + 1).toString() } }; });
-                mapInstance.addSource('pts-src', { 'type': 'geojson', 'data': { "type": "FeatureCollection", "features": pts } });
-                mapInstance.addLayer({ 'id': 'pts-c', 'type': 'circle', 'source': 'pts-src', 'paint': { 'circle-radius': 14, 'circle-color': '#007bff', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } });
-                mapInstance.addLayer({ 'id': 'pts-l', 'type': 'symbol', 'source': 'pts-src', 'layout': { 'text-field': ['get', 'idx'], 'text-size': 11, 'text-font': ["Open Sans Bold"] }, 'paint': { 'text-color': '#fff' } });
                 var bounds = new maplibregl.LngLatBounds();
-                coords.forEach(function (c) { bounds.extend(c); });
-                mapInstance.fitBounds(bounds, { padding: 60 });
+                var coords = filtered[0].geometry.type === 'MultiPolygon'
+                    ? filtered[0].geometry.coordinates[0][0]
+                    : filtered[0].geometry.coordinates[0];
+                coords.forEach(function(c) { bounds.extend(c); });
+                mapInstance.fitBounds(bounds, { padding: 50 });
             }
-            mapInstance.on('click', 'fill', showDetail);
-            mapInstance.on('click', 'pts-c', function (e) { highlightPhoto(e.features[0].properties.idx); });
+
+            mapInstance.on('click', 'fill', function() { showDetailPanel(); });
         });
     }
 
-    function highlightPhoto(idx) {
-        showDetail();
-        setTimeout(function () {
-            document.querySelectorAll('.photo-item').forEach(function (el) { el.classList.remove('highlight'); });
-            var t = document.getElementById('photo-' + idx);
-            if (t) { t.classList.add('highlight'); t.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-        }, 500);
-    }
-
-    function showDetail() {
-        document.getElementById('parcel-title').innerText = "物件地番：" + (targetData.parcel_number || "---");
-        document.getElementById('photo-list').innerHTML = getUrls(targetData.evidence_photo_url).map(function (u, i) {
-            return '<div class="photo-item" id="photo-' + (i + 1) + '"><span class="photo-badge">杭No.' + (i + 1) + '</span><img src="' + u + '"></div>';
-        }).join('');
-        document.body.classList.add('mode-split');
-        setTimeout(function () { mapInstance.resize(); }, 300);
-    }
-
-    function closeDetail() { document.body.classList.remove('mode-split'); setTimeout(function () { mapInstance.resize(); }, 300); }
-
-    // ─── 署名 ────────────────────────────────────────────────
-    function setSigMethod(m) {
-        sigMethod = m;
-        document.getElementById('m-hand').classList.toggle('active', m === 'hand');
-        document.getElementById('m-digital').classList.toggle('active', m === 'digital');
-        document.getElementById('hand-area').style.display = m === 'hand' ? 'block' : 'none';
-        document.getElementById('digital-area').style.display = m === 'digital' ? 'block' : 'none';
-        if (m === 'digital') {
-            var addr = document.getElementById('current-address').value;
-            document.getElementById('stamp-preview').innerText = addr ? addr.substring(0, 1) : "印";
-        }
-    }
-
+    /* ══════════════════════════════════════════
+       署名キャンバス
+    ══════════════════════════════════════════ */
     function initCanvas() {
         var cvs = document.getElementById('sig-canvas');
         cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
         sigCtx = cvs.getContext('2d');
+        sigCtx.lineWidth = 2.5; sigCtx.strokeStyle = '#000';
+        sigCtx.lineCap = 'round'; sigCtx.lineJoin = 'round';
         var drawing = false;
-        function getP(e) { var r = cvs.getBoundingClientRect(); return { x: (e.touches ? e.touches[0].clientX : e.clientX) - r.left, y: (e.touches ? e.touches[0].clientY : e.clientY) - r.top }; }
-        cvs.addEventListener('touchstart', function (e) { drawing = true; sigCtx.beginPath(); sigCtx.moveTo(getP(e).x, getP(e).y); e.preventDefault(); }, { passive: false });
-        cvs.addEventListener('touchmove', function (e) { if (!drawing) return; sigCtx.lineTo(getP(e).x, getP(e).y); sigCtx.stroke(); e.preventDefault(); }, { passive: false });
-        cvs.addEventListener('mousedown', function (e) { drawing = true; sigCtx.beginPath(); sigCtx.moveTo(getP(e).x, getP(e).y); });
-        cvs.addEventListener('mousemove', function (e) { if (!drawing) return; sigCtx.lineTo(getP(e).x, getP(e).y); sigCtx.stroke(); });
-        window.addEventListener('touchend', function () { drawing = false; });
-        window.addEventListener('mouseup', function () { drawing = false; });
-        sigCtx.lineWidth = 3; sigCtx.lineCap = "round"; sigCtx.strokeStyle = "#000";
+
+        function getPos(e) {
+            var r   = cvs.getBoundingClientRect();
+            var src = e.touches ? e.touches[0] : e;
+            return { x: src.clientX - r.left, y: src.clientY - r.top };
+        }
+        function start(e) { drawing = true; var p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); if (e.cancelable) e.preventDefault(); }
+        function move(e)  {
+            if (!drawing) return;
+            var p = getPos(e);
+            if (currentTool === 'eraser') { sigCtx.clearRect(p.x - 18, p.y - 18, 36, 36); }
+            else { sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); }
+            if (e.cancelable) e.preventDefault();
+        }
+        function end() { drawing = false; }
+
+        cvs.addEventListener('touchstart', start, { passive: false });
+        cvs.addEventListener('touchmove',  move,  { passive: false });
+        cvs.addEventListener('mousedown',  start);
+        cvs.addEventListener('mousemove',  move);
+        window.addEventListener('touchend', end);
+        window.addEventListener('mouseup',  end);
     }
 
-    function setTool(t) {
-        currentTool = t;
-        document.getElementById('t-pen').classList.toggle('active', t === 'pen');
-        document.getElementById('t-eraser').classList.toggle('active', t === 'eraser');
-        if (!sigCtx) return;
-        sigCtx.globalCompositeOperation = (t === 'eraser') ? 'destination-out' : 'source-over';
-        sigCtx.lineWidth = (t === 'eraser') ? 25 : 3;
+    function setTool(tool) {
+        currentTool = tool;
+        document.getElementById('tool-pen').classList.toggle('active',    tool === 'pen');
+        document.getElementById('tool-eraser').classList.toggle('active', tool === 'eraser');
+    }
+    function switchSigMode(mode) {
+        currentSigMode = mode;
+        document.getElementById('tab-handwrite').classList.toggle('active', mode === 'handwrite');
+        document.getElementById('tab-seal').classList.toggle('active',      mode === 'seal');
+        document.getElementById('handwrite-area').style.display = mode === 'handwrite' ? 'block' : 'none';
+        document.getElementById('seal-area').style.display      = mode === 'seal'      ? 'block' : 'none';
+    }
+    function switchSealMode(mode) {
+        currentSealMode = mode;
+        document.getElementById('tab-seal-gen').classList.toggle('active',    mode === 'gen');
+        document.getElementById('tab-seal-upload').classList.toggle('active', mode === 'upload');
+        document.getElementById('seal-gen-area').style.display    = mode === 'gen'    ? 'block' : 'none';
+        document.getElementById('seal-upload-area').style.display = mode === 'upload' ? 'block' : 'none';
     }
 
-    function clearSig() { if (sigCtx) sigCtx.clearRect(0, 0, 9999, 9999); }
-
-    // ─── プログレスUI ────────────────────────────────────────
-    function showOverlay(spinning) {
-        document.getElementById('pdf-progress').style.display = 'flex';
-        document.getElementById('progress-spinner').style.display = spinning ? 'block' : 'none';
-        document.getElementById('error-box').style.display = 'none';
-        document.getElementById('pdf-download-btn').style.display = 'none';
-        document.getElementById('reload-btn').style.display = 'none';
+    /* ══════════════════════════════════════════
+       電子印影
+    ══════════════════════════════════════════ */
+    function generateSeal() {
+        var name = document.getElementById('seal-name').value.trim();
+        if (!name) { alert('氏名を入力してください'); return; }
+        var cvs = document.getElementById('seal-canvas');
+        var size = 160, cx = size / 2, cy = size / 2, r = 72;
+        cvs.width = cvs.height = size;
+        var ctx = cvs.getContext('2d');
+        ctx.clearRect(0, 0, size, size);
+        ctx.strokeStyle = '#CC0000'; ctx.fillStyle = '#CC0000'; ctx.lineWidth = 4;
+        [r, r - 10].forEach(function(radius) { ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke(); });
+        var chars = Array.from(name);
+        var fsize = chars.length <= 2 ? 38 : chars.length <= 4 ? 28 : 22;
+        ctx.font = 'bold ' + fsize + 'px "Hiragino Mincho ProN", serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        var lines = chars.length <= 2 ? chars.map(function(c){return c;}) :
+                    chars.length <= 4 ? [chars.slice(0,2).join(''), chars.slice(2).join('')] :
+                    [chars.slice(0,2).join(''), chars.slice(2,4).join(''), chars.slice(4).join('')];
+        var lh = fsize + 4, sy = cy - (lines.length * lh) / 2 + lh / 2;
+        lines.forEach(function(line, i) { ctx.fillText(line, cx, sy + i * lh); });
+        sealGenerated = true;
     }
-    function setStatus(msg) { document.getElementById('progress-status').innerText = msg; }
-    function showError(msg) {
-        document.getElementById('progress-spinner').style.display = 'none';
-        document.getElementById('progress-status').innerText = "⚠️ エラーが発生しました";
-        var eb = document.getElementById('error-box');
-        eb.style.display = 'block';
-        eb.innerText = msg;
-        document.getElementById('reload-btn').style.display = 'block';
-    }
-    function showDone(msg) {
-        document.getElementById('progress-spinner').style.display = 'none';
-        document.getElementById('progress-status').innerText = msg;
+
+    function onSealFileChange(input) {
+        if (!input.files || !input.files[0]) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            uploadedSealUrl = e.target.result;
+            document.getElementById('seal-preview-img').src = uploadedSealUrl;
+            document.getElementById('seal-preview-wrap').style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
     }
 
-    // ─── 確定処理 ────────────────────────────────────────────
-    async function finalizeProcess() {
-        showOverlay(true);
-        setStatus("署名データを生成中...");
-        await sleep(600);
+    function getSignatureData() {
+        if (currentSigMode === 'handwrite') return document.getElementById('sig-canvas').toDataURL('image/png');
+        if (currentSealMode === 'gen') {
+            if (!sealGenerated) { alert('印影を生成してください'); return null; }
+            return document.getElementById('seal-canvas').toDataURL('image/png');
+        }
+        if (!uploadedSealUrl) { alert('印影画像を選択してください'); return null; }
+        return uploadedSealUrl;
+    }
 
-        // 署名画像生成
-        var sigData = "";
-        try {
-            if (sigMethod === 'hand') {
-                var oc = document.createElement('canvas'); oc.width = 300; oc.height = 150;
-                var ox = oc.getContext('2d'); ox.fillStyle = "white"; ox.fillRect(0, 0, 300, 150);
-                ox.drawImage(document.getElementById('sig-canvas'), 0, 0, 300, 150);
-                sigData = oc.toDataURL("image/png");
-            } else {
-                var sc = document.createElement('canvas'); sc.width = 200; sc.height = 200;
-                var sx = sc.getContext('2d');
-                sx.strokeStyle = "#ff4757"; sx.lineWidth = 8;
-                sx.beginPath(); sx.arc(100, 100, 85, 0, Math.PI * 2); sx.stroke();
-                sx.fillStyle = "#ff4757"; sx.font = "bold 90px serif"; sx.textAlign = "center"; sx.textBaseline = "middle";
-                sx.fillText(document.getElementById('stamp-preview').innerText, 100, 100);
-                sigData = sc.toDataURL("image/png");
-            }
-        } catch (e) { showError("署名生成エラー: " + e.message); return; }
-
-        // DB保存
-        setStatus("署名をデータベースに保存中...");
-        var updates = isOwner
-            // 甲：署名＋LINEユーザーIDも保存（後でPush送信先として使う）
-            ? { sig_a_done: true, sig_a_data: sigData, owner_address: document.getElementById('current-address').value, owner_requests: document.getElementById('owner-msg').value, owner_line_user_id: lineUserId }
-            : { sig_b_done: true, sig_b_data: sigData, adjacent_address: document.getElementById('current-address').value, is_agreed: true };
-
-        var saveRes = await DB.from('forest_plots').update(updates).eq('id', targetData.id);
-        if (saveRes.error) { showError("DB保存エラー:\n" + JSON.stringify(saveRes.error, null, 2)); return; }
-
-        // 最新データ取得
-        var fetchRes = await DB.from('forest_plots').select('*').eq('id', targetData.id).single();
-        var updated = fetchRes.data;
-
-        if (updated && updated.sig_a_done && updated.sig_b_done) {
-            await generateAndSendPDF(updated);
+    function clearSig() {
+        if (currentSigMode === 'handwrite') {
+            if (sigCtx) sigCtx.clearRect(0, 0, 10000, 10000);
+        } else if (currentSealMode === 'gen') {
+            var cvs = document.getElementById('seal-canvas');
+            cvs.getContext('2d').clearRect(0, 0, cvs.width, cvs.height);
+            sealGenerated = false;
+            document.getElementById('seal-name').value = '';
         } else {
-            showDone("✅ 署名を保存しました。隣接者の署名をお待ちください。");
-            document.getElementById('reload-btn').style.display = 'block';
+            uploadedSealUrl = null;
+            document.getElementById('seal-preview-wrap').style.display = 'none';
+            document.getElementById('seal-upload-input').value = '';
         }
     }
 
-    // ─── PDF生成・アップロード・LINE送信 ────────────────────
-    async function generateAndSendPDF(plot) {
-        setStatus("証明書PDFを生成中...");
-        var now = new Date();
-        var txId = "TXN-" + now.getTime().toString().slice(-8);
-        var txHash = Array.from({ length: 64 }, function () { return Math.floor(Math.random() * 16).toString(16); }).join('');
-        var mapImg = "";
-        try { mapImg = mapInstance.getCanvas().toDataURL('image/jpeg', 0.85); } catch (e) {}
-
-        var template = document.getElementById('pdf-template');
-        template.innerHTML = buildPDFHTML(plot, txId, "0x" + txHash, mapImg, now);
-
-        // 証憑写真をBase64変換
-        setStatus("証憑写真を処理中...");
-        var photoArea = template.querySelector('#pdf-photos');
-        var urls = getUrls(plot.evidence_photo_url);
-        for (var i = 0; i < urls.length; i++) {
-            try {
-                var b64 = await imgToBase64(urls[i]);
-                photoArea.innerHTML += '<div style="border:1px solid #ddd; height:180px; display:flex; align-items:center; justify-content:center;"><img src="' + b64 + '" style="max-width:100%; max-height:100%; object-fit:contain;"></div>';
-            } catch (e) {
-                photoArea.innerHTML += '<div style="border:1px dashed #ddd; height:100px; display:flex; align-items:center; justify-content:center; color:#999; font-size:11px;">写真取得不可</div>';
-            }
-        }
-
-        setStatus("PDFに変換中（10〜30秒かかる場合があります）...");
-        var pdfBlob;
-        try {
-            pdfBlob = await html2pdf().set({
-                margin: 0,
-                html2canvas: { scale: 2, useCORS: true, allowTaint: true },
-                jsPDF: { unit: 'mm', format: 'a4' }
-            }).from(template).output('blob');
-        } catch (e) { showError("PDF変換エラー:\n" + e.message); return; }
-
-        template.innerHTML = '';
-
-        // ─ Supabase Storageアップロード ─
-        setStatus("Supabase Storageにアップロード中...");
-        var fileName = 'Certificate_' + txId + '_' + Date.now() + '.pdf';
-        var uploadRes = await DB.storage.from('pdfs').upload(fileName, pdfBlob, { contentType: 'application/pdf', upsert: false });
-
-        if (uploadRes.error) {
-            // ── エラーの種類に応じてガイダンスを出す ──
-            var errCode = (uploadRes.error.statusCode || uploadRes.error.status || "");
-            var errMsg = uploadRes.error.message || JSON.stringify(uploadRes.error);
-            var guide = "";
-
-            if (errCode == 403 || errMsg.indexOf("policy") !== -1 || errMsg.indexOf("RLS") !== -1) {
-                guide = "\n\n【対処法】Supabaseダッシュボード → Storage → Policies → 'pdfs' バケットに INSERT ポリシーを追加してください:\n\nCREATE POLICY \"anon_upload\"\nON storage.objects FOR INSERT TO anon\nWITH CHECK (bucket_id = 'pdfs');";
-            } else if (errCode == 404 || errMsg.indexOf("not found") !== -1 || errMsg.indexOf("Bucket not found") !== -1) {
-                guide = "\n\n【対処法】Supabaseダッシュボード → Storage で 'pdfs' という名前のバケットを作成してください。";
-            }
-
-            // フォールバック: ブラウザダウンロード
-            showError("Storageアップロード失敗 [" + errCode + "]\n" + errMsg + guide);
-            await sleep(200);
-            fallbackDownload(pdfBlob, fileName);
-            return;
-        }
-
-        // 公開URL取得
-        var urlRes = DB.storage.from('pdfs').getPublicUrl(fileName);
-        pdfPublicUrl = urlRes.data.publicUrl;
-
-        // ─ LINE送信（甲＝土地所有者へ送る）─
-        setStatus("LINEに通知を送信中...");
-        var lineSent = false;
-        var ownerLineId = plot.owner_line_user_id || "";
-
-        if (typeof liff !== 'undefined' && liff.isInClient()) {
-            if (!isOwner && ownerLineId) {
-                // 乙が処理中 → 甲のLINEにPush送信（Messaging API経由）
-                try {
-                    await sendPushToOwner(ownerLineId, buildLINEFlexMessage(plot, txId, pdfPublicUrl));
-                    lineSent = true;
-                } catch (e) {
-                    console.warn("Push to owner failed:", e);
-                }
-            }
-            // 処理した本人（乙 or 甲）のトークにも送信
-            try {
-                await liff.sendMessages([buildLINEFlexMessage(plot, txId, pdfPublicUrl)]);
-                lineSent = true;
-            } catch (lineErr) {
-                console.warn("liff.sendMessages:", lineErr);
-            }
-        }
-
-        document.getElementById('progress-text').innerText = '完了';
-        showDone(lineSent
-            ? "✅ 合意完了！LINEに証明書URLを送りました。"
-            : "✅ 合意完了！証明書を発行しました。");
-
-        if (pdfPublicUrl) {
-            var dlBtn = document.getElementById('pdf-download-btn');
-            dlBtn.style.display = 'block';
-            dlBtn.onclick = function () { window.open(pdfPublicUrl, '_blank'); };
-        }
-        document.getElementById('reload-btn').style.display = 'block';
-    }
-
-    // ─── LINE Push送信（甲へ Supabase Edge Function 経由）────────
-    // Edge Function "line-push" のコードは下部コメント参照
-    async function sendPushToOwner(toUserId, message) {
-        if (!toUserId) return;
-        var res = await fetch(
-            'https://uggpclqqyaailuadgzxv.supabase.co/functions/v1/line-push',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnZ3BjbHFxeWFhaWx1YWRnenh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MzE0NTgsImV4cCI6MjA5MDEwNzQ1OH0.jY5jJuJUgwbIZm8y-jJvEH27eAP9m9semR3MbLxVxGo'
-                },
-                body: JSON.stringify({ to: toUserId, messages: [message] })
-            }
-        );
-        if (!res.ok) throw new Error("Push status: " + res.status);
-    }
-
-    // ─── LINEメッセージ ──────────────────────────────────────
-    function buildLINEFlexMessage(plot, txId, url) {
+    /* ══════════════════════════════════════════
+       AI資産価値予測
+    ══════════════════════════════════════════ */
+    function generateAIPrediction(area_ha) {
+        var ha = parseFloat(area_ha) || 1;
+        var timber  = Math.round(ha * 350 * 12800);
+        var land    = Math.round(ha * 800000);
+        var current = timber + land;
+        var carbon  = Math.round(ha * 8.5 * 2800 * 10);
         return {
-            type: "flex", altText: "【織杜】山林境界確定証明書を発行しました",
-            contents: {
-                type: "bubble",
-                header: { type: "box", layout: "vertical", backgroundColor: "#00B900", paddingAll: "16px", contents: [{ type: "text", text: "山林境界確定完了", weight: "bold", color: "#ffffff", size: "lg" }] },
-                body: { type: "box", layout: "vertical", spacing: "sm", contents: [
-                    { type: "text", text: "合意証明書を発行しました", size: "sm", color: "#666666" },
-                    { type: "separator", margin: "md" },
-                    { type: "box", layout: "horizontal", margin: "md", contents: [{ type: "text", text: "地番", size: "sm", color: "#888", flex: 1 }, { type: "text", text: plot.parcel_number || "---", size: "sm", flex: 2 }] },
-                    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "管理番号", size: "sm", color: "#888", flex: 1 }, { type: "text", text: txId, size: "sm", flex: 2 }] },
-                    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "所有者（甲）", size: "sm", color: "#888", flex: 1 }, { type: "text", text: (plot.owner_address || "---").substring(0, 12), size: "sm", flex: 2, wrap: true }] },
-                    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "隣接者（乙）", size: "sm", color: "#888", flex: 1 }, { type: "text", text: (plot.adjacent_address || "---").substring(0, 12), size: "sm", flex: 2, wrap: true }] }
-                ]},
-                footer: { type: "box", layout: "vertical", spacing: "sm", contents: [
-                    { type: "button", action: { type: "uri", label: "📄 証明書PDFを確認", uri: url }, style: "primary", color: "#8247E5" },
-                    { type: "text", text: "ASTAR NETWORK: TX FINALIZED", size: "xxs", color: "#aaa", align: "center", margin: "sm" }
-                ]}
-            }
+            current: current, timber: timber, land: land, carbon: carbon,
+            risk:   Math.round(current * 0.78),
+            stable: Math.round((current + carbon) * 1.18)
         };
     }
 
-    // ─── PDFテンプレート ─────────────────────────────────────
-    function buildPDFHTML(plot, txId, txHash, mapImg, now) {
-        return '<div style="padding:15mm; font-family:serif; line-height:1.7; background:white; color:#000;">'
-            + '<div style="text-align:right; font-size:11px;">決済管理番号：' + txId + '<br>発行日時：' + now.toLocaleString('ja-JP') + '</div>'
-            + '<h1 style="text-align:center; text-decoration:underline; font-size:26px; margin:20px 0;">山林境界確定合意証明書</h1>'
-            + '<p style="font-size:13px;">不動産登記法及び森林法に基づき、地権者並びに隣接土地所有者の立会いのもと筆界調査を実施した。その結果、調査対象箇所における境界に相違ないことを当事者双方が確認し、信義誠実の原則に基づき本合意を締結したことを証明する。本証書はWeb3.0技術によりオンチェーン上にハッシュ値が刻印されており、永久的な証憑性を有する。</p>'
-            + '<h3 style="border-bottom:2px solid #000; padding-bottom:5px;">1. 不動産の表示</h3>'
-            + '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:2px solid #000;">'
-            + '<tr><td style="background:#f2f2f2; width:20%; padding:10px; border:1px solid #000; font-weight:bold;">所在</td><td colspan="3" style="padding:10px; border:1px solid #000;">' + (plot.location || '宮崎県内山林') + '</td></tr>'
-            + '<tr><td style="background:#f2f2f2; padding:10px; border:1px solid #000; font-weight:bold;">地番</td><td style="padding:10px; border:1px solid #000;">' + (plot.parcel_number || '―') + '</td><td style="background:#f2f2f2; width:20%; padding:10px; border:1px solid #000; font-weight:bold;">地目</td><td style="padding:10px; border:1px solid #000;">' + (plot.land_category || '山林') + '</td></tr>'
-            + '<tr><td style="background:#f2f2f2; padding:10px; border:1px solid #000; font-weight:bold;">公簿地籍</td><td style="padding:10px; border:1px solid #000;">' + (plot.area_ha || '0.00') + ' ha</td><td style="background:#f2f2f2; padding:10px; border:1px solid #000; font-weight:bold;">主樹種</td><td style="padding:10px; border:1px solid #000;">' + (plot.tree_species || 'スギ') + '</td></tr>'
-            + '</table>'
-            + '<h3 style="border-bottom:2px solid #000; padding-bottom:5px;">2. 境界実地調査図</h3>'
-            + '<div style="border:1px solid #000; padding:5px;">' + (mapImg ? '<img src="' + mapImg + '" style="width:100%; height:340px; object-fit:cover;">' : '<div style="height:200px; text-align:center; line-height:200px; color:#999;">地図画像なし</div>') + '</div>'
-            + '<div style="page-break-before:always;"></div>'
-            + '<h3 style="border-bottom:2px solid #000; padding-bottom:5px; margin-top:20px;">3. 境界確定合意署名</h3>'
-            + '<div style="display:flex; justify-content:space-around; margin-top:30px;">'
-            + buildSigBlock("甲", "土地所有者（甲）", plot.owner_address, plot.sig_a_data)
-            + buildSigBlock("乙", "隣接土地所有者（乙）", plot.adjacent_address, plot.sig_b_data)
-            + '</div>'
-            + '<h3 style="border-bottom:2px solid #000; padding-bottom:5px; margin-top:30px;">4. 証憑記録（Web3.0 認証）</h3>'
-            + '<div style="padding:15px; border:1px solid #8247E5; background:#fbf8ff; font-family:monospace; font-size:10px;">'
-            + 'Ledger Hash: ' + txHash + '<br>Consensus ID: ' + txId + '<br>Status: FINALIZED ON ASTAR NETWORK'
-            + '</div>'
-            + '<h3 style="border-bottom:2px solid #000; padding-bottom:5px; margin-top:30px;">5. 現地証憑写真</h3>'
-            + '<div id="pdf-photos" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px;"></div>'
-            + '</div>';
+    /* ══════════════════════════════════════════
+       レポート描画
+    ══════════════════════════════════════════ */
+    function populateReport() {
+        if (!targetData) return;
+        var d    = targetData;
+        var pred = generateAIPrediction(d.area_ha);
+        document.getElementById('report-title').innerText        = d.parcel_number || '物件レポート';
+        document.getElementById('access-badge-report').innerHTML = getAccessLabel();
+
+        var photos    = getPhotos(d);
+        var photoHtml = photos.length > 0
+            ? '<div class="photo-grid">' + photos.map(function(u) { return '<div class="photo-item"><img src="' + u + '" /></div>'; }).join('') + '</div>'
+            : '<p style="color:#bbb;font-size:12px;">写真なし</p>';
+
+        var sigStatus = (d.is_agreed || (d.sig_a_done && d.sig_b_done))
+            ? '✅ 両者合意済み' : d.sig_a_done ? '🟡 甲のみ署名済み' : '🔴 未署名';
+
+        // コード一覧表示（所有者のみ）
+        var shareCodeHtml = '';
+        if (isOwnerAccess()) {
+            var viewCode     = d.invitation_code + VIEW_SUFFIX;
+            var adjCode      = d.adjacent_code || '（未設定）';
+            shareCodeHtml =
+                '<div class="report-section">' +
+                '<div class="report-title">🔑 コード管理（所有者専用）</div>' +
+                '<div class="share-code-box">' +
+                    '<div style="font-size:11px; color:#666; margin-bottom:10px;">各コードを相手に共有してください</div>' +
+                    codeRow('👑 甲（所有者）コード', d.invitation_code) +
+                    codeRow('✏️ 乙（隣接者）コード', adjCode) +
+                    codeRow('👁️ 閲覧専用コード',     viewCode) +
+                '</div>' +
+                '</div>';
+        }
+
+        // アクセス制限チェック
+        if (!canSeeReport()) {
+            document.getElementById('report-content').innerHTML =
+                '<div style="padding:30px; text-align:center;">' +
+                '<div class="access-denied">' +
+                    '<div class="access-denied-icon">🔒</div>' +
+                    '<div style="font-weight:bold; font-size:16px; margin-bottom:8px;">閲覧制限</div>' +
+                    '<div style="font-size:13px; opacity:0.85;">このレポートは所有者が許可した方のみ<br>閲覧できます。</div>' +
+                    '<div style="font-size:11px; opacity:0.6; margin-top:12px;">閲覧コード（末尾 "-V"）をお持ちの方は<br>ホーム画面「森林レポート閲覧」からご入力ください。</div>' +
+                '</div>' +
+                '</div>';
+            document.getElementById('btn-generate-pdf').disabled = true;
+            document.getElementById('pdf-status-msg').innerText  = 'アクセス権限がありません';
+            return;
+        }
+
+        document.getElementById('report-content').innerHTML =
+            shareCodeHtml +
+            sec('物件情報',
+                row('地番', d.parcel_number || '-') +
+                row('面積', (d.area_ha || '-') + ' ha') +
+                row('署名状況', sigStatus)
+            ) +
+            sec('当事者情報',
+                row('甲（土地所有者）', d.owner_address    || '未入力') +
+                row('乙（隣接所有者）', d.adjacent_address || '未入力')
+            ) +
+            sec('現地写真', photoHtml) +
+            sec('🤖 AI資産価値予測',
+                '<p style="font-size:11px;color:#aaa;margin:0 0 10px;">木材市況・カーボンクレジット・地価動向をもとに算出</p>' +
+                '<div class="ai-grid">' +
+                    '<div class="ai-card ai-card-main">' +
+                        '<div class="ai-sublabel">現在推定価値</div>' +
+                        '<div class="ai-value-main">' + formatYen(pred.current) + '</div>' +
+                        '<div class="ai-sublabel">木材 ' + formatYen(pred.timber) + ' ＋ 地価 ' + formatYen(pred.land) + '</div>' +
+                    '</div>' +
+                    '<div class="ai-card ai-card-risk">' +
+                        '<div class="ai-sublabel">📉 リスクシナリオ</div>' +
+                        '<div class="ai-value-risk">' + formatYen(pred.risk) + '</div>' +
+                        '<div class="ai-sublabel">木材価格下落・需要減</div>' +
+                    '</div>' +
+                    '<div class="ai-card ai-card-stable">' +
+                        '<div class="ai-sublabel">📈 安定シナリオ</div>' +
+                        '<div class="ai-value-stable">' + formatYen(pred.stable) + '</div>' +
+                        '<div class="ai-sublabel">炭素クレジット込み</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="ai-carbon-box">💡 カーボンクレジット推定収益（10年）：' + formatYen(pred.carbon) + '<br>（' + (d.area_ha || 1) + ' ha × 8.5 tCO₂/年 × ¥2,800/t × 10年）</div>'
+            );
+
+        var canPDF = !!(d.is_agreed || (d.sig_a_done && d.sig_b_done));
+        document.getElementById('btn-generate-pdf').disabled   = !canPDF;
+        document.getElementById('pdf-status-msg').innerText    = canPDF ? 'PDF発行が可能です' : '2名の署名が完了するとPDFを発行できます';
     }
 
-    function buildSigBlock(label, title, address, sigData) {
-        return '<div style="text-align:center; width:47%;">'
-            + '<div style="min-height:300px; border:1px solid #000; padding:15px;">'
-            + '<div style="font-size:11px; text-align:left; padding:10px 0;"><b>【現住所】</b><br>' + (address || '（未記載）') + '</div>'
-            + '<div style="margin-top:20px; border-top:1px dashed #ccc; padding-top:15px;">'
-            + '<div style="font-size:10px; color:#888; text-align:left; margin-bottom:8px;">【合意署名】</div>'
-            + (sigData ? '<img src="' + sigData + '" style="width:100%; max-height:130px; object-fit:contain;">' : '<div style="height:80px; text-align:center; line-height:80px; color:#ccc;">署名なし</div>')
-            + '</div></div>'
-            + '<p style="font-weight:bold; margin-top:8px;">' + title + '</p>'
-            + '</div>';
+    function codeRow(label, code) {
+        var safe = code.replace(/'/g, "\\'");
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #d4edda;">' +
+            '<span style="font-size:12px;color:#555;">' + label + '</span>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+                '<span style="font-weight:bold;letter-spacing:2px;font-size:13px;color:var(--dgreen);">' + code + '</span>' +
+                (code !== '（未設定）'
+                    ? '<button onclick="navigator.clipboard.writeText(\'' + safe + '\').then(function(){alert(\'コピーしました\');})" style="border:none;background:var(--green);color:#fff;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">コピー</button>'
+                    : '') +
+            '</div>' +
+        '</div>';
     }
 
-    // ─── ユーティリティ ──────────────────────────────────────
-    function getUrls(d) {
-        if (!d) return [];
-        var m = String(d).match(/https?:\/\/[^\s,"{}]+/g);
-        return m ? m.map(function (u) { return u.replace(/[\]\}\s,]+$/, ''); }) : [];
+    function sec(title, content) {
+        return '<div class="report-section"><div class="report-title">' + title + '</div>' + content + '</div>';
+    }
+    function row(label, value) {
+        return '<div class="info-row"><span class="info-label">' + label + '</span><span class="info-value">' + value + '</span></div>';
     }
 
-    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+    /* ══════════════════════════════════════════
+       PDF生成
+    ══════════════════════════════════════════ */
+    async function generatePDF() {
+        if (!targetData) return;
+        var d = targetData;
+        showLoader();
+        updateStatus('📄 PDFを生成中...');
 
-    function imgToBase64(url) {
-        return new Promise(function (resolve, reject) {
-            var img = new Image(); img.crossOrigin = "Anonymous";
-            img.onload = function () {
-                var c = document.createElement("canvas"); c.width = img.width; c.height = img.height;
-                c.getContext("2d").drawImage(img, 0, 0);
-                try { resolve(c.toDataURL("image/jpeg", 0.8)); } catch (e) { reject(e); }
-            };
-            img.onerror = function () { reject(new Error("Load failed")); };
-            img.src = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
-        });
-    }
+        var mapImg = '';
+        try { var mc = document.querySelector('#map canvas'); if (mc) mapImg = mc.toDataURL('image/jpeg', 0.85); } catch(e) {}
 
-    function fallbackDownload(blob, fileName) {
+        var pred  = generateAIPrediction(d.area_ha);
+        var photos = getPhotos(d);
+        var today  = new Date().toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' });
+        var modeLabel = currentMode === 'boundary' ? '境界確定合意書' : '立木売買契約書';
+
+        var photoSection = photos.length > 0
+            ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;">' +
+              photos.map(function(u) { return '<img src="' + u + '" crossorigin="anonymous" style="width:100%;border-radius:6px;border:1px solid #ddd;"/>'; }).join('') +
+              '</div>'
+            : '<p style="color:#999;font-size:11pt;">写真なし</p>';
+
+        var mapSection = mapImg ? '<h3 style="color:#00B900;border-bottom:1px solid #ddd;padding-bottom:4px;">■ 位置図</h3><img src="' + mapImg + '" style="width:100%;border-radius:6px;border:1px solid #ddd;margin:6px 0;"/>' : '';
+        var sigA = d.sig_a_data ? '<img src="' + d.sig_a_data + '" style="height:80px;"/>' : '（未署名）';
+        var sigB = d.sig_b_data ? '<img src="' + d.sig_b_data + '" style="height:80px;"/>' : '（未署名）';
+
+        document.getElementById('pdf-template').innerHTML =
+            '<div style="padding:15mm 20mm;font-family:\'Hiragino Mincho ProN\',serif;font-size:11pt;color:#222;">' +
+                '<div style="text-align:center;margin-bottom:18px;">' +
+                    '<div style="font-size:22pt;font-weight:bold;letter-spacing:4px;">' + modeLabel + '</div>' +
+                    '<div style="font-size:9pt;color:#888;margin-top:4px;">作成日：' + today + '　ORITO 森林境界・立木取引 DXプラットフォーム</div>' +
+                '</div>' +
+                '<hr style="border:2px solid #00B900;margin:12px 0;"/>' +
+                pdfSec('物件情報') + pdfTable([['地番', d.parcel_number||'-'], ['面積', (d.area_ha||'-')+' ha']]) +
+                pdfSec('当事者情報') + pdfTable([['甲（土地所有者）', d.owner_address||'-'], ['乙（隣接所有者）', d.adjacent_address||'-']]) +
+                mapSection +
+                pdfSec('現地写真') + photoSection +
+                pdfSec('AI資産価値予測') + pdfTable([
+                    ['現在推定価値', formatYen(pred.current)],
+                    ['リスクシナリオ（10年後）', formatYen(pred.risk)],
+                    ['安定シナリオ（炭素クレジット込み）', formatYen(pred.stable)],
+                    ['カーボンクレジット推定収益（10年）', formatYen(pred.carbon)]
+                ]) +
+                pdfSec('署名・捺印') +
+                '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">' +
+                    '<tr>' +
+                        '<td style="border:1px solid #ddd;padding:12px;text-align:center;width:50%;"><div style="margin-bottom:8px;">甲（土地所有者）</div>' + sigA + '</td>' +
+                        '<td style="border:1px solid #ddd;padding:12px;text-align:center;width:50%;"><div style="margin-bottom:8px;">乙（隣接所有者）</div>' + sigB + '</td>' +
+                    '</tr>' +
+                '</table>' +
+                '<hr style="border:1px solid #ddd;"/>' +
+                '<p style="font-size:8pt;color:#aaa;text-align:center;margin-top:8px;">本書は織杜ORITOプラットフォームにより電子的に作成・保管されています</p>' +
+            '</div>';
+
+        var pdfFileName = 'pdf/orito_' + (d.parcel_number || 'report').replace(/\s/g,'_') + '_' + Date.now() + '.pdf';
         try {
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
-            setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
-        } catch (e) { console.error("fallback download failed", e); }
+            /* ── Step1: PDF を Blob として生成 ── */
+            updateStatus('📄 PDF生成中...');
+            var pdfBlob = await html2pdf().from(document.getElementById('pdf-template')).set({
+                margin: 0,
+                filename: pdfFileName,
+                image:       { type: 'jpeg', quality: 0.92 },
+                html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+                jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).output('blob');
+
+            /* ── Step2: Supabase Storage にアップロード ── */
+            updateStatus('☁️ ストレージへアップロード中...');
+            var uploadRes = await db.storage
+                .from('orito-pdfs')
+                .upload(pdfFileName, pdfBlob, { contentType: 'application/pdf', upsert: true });
+
+            if (uploadRes.error) throw new Error('Upload: ' + uploadRes.error.message);
+
+            /* ── Step3: 公開URLを取得して開く ── */
+            var urlRes = db.storage.from('orito-pdfs').getPublicUrl(pdfFileName);
+            var pdfUrl = urlRes.data.publicUrl;
+
+            updateStatus('✅ PDF発行完了！');
+            hideLoader();
+
+            /* LINE LIFF 内では外部ブラウザで開く、それ以外は新規タブ */
+            if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
+                liff.openWindow({ url: pdfUrl, external: true });
+            } else {
+                window.open(pdfUrl, '_blank');
+            }
+            alert('PDFを発行しました。\n開かない場合は外部ブラウザをご確認ください。');
+
+        } catch(e) {
+            hideLoader();
+            /* ── フォールバック: 直接ダウンロード ── */
+            try {
+                await html2pdf().from(document.getElementById('pdf-template')).set({
+                    margin: 0,
+                    filename: pdfFileName,
+                    image:       { type: 'jpeg', quality: 0.92 },
+                    html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+                    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                }).save();
+                alert('PDFを発行しました（ダウンロード）。');
+            } catch(e2) {
+                alert('PDF生成に失敗しました。\nStorage: ' + e.message + '\n直接DL: ' + e2.message);
+            }
+        }
     }
 
-    function handlePreview(input, id) {
-        var f = input.files[0];
-        if (!f) return;
-        var r = new FileReader();
-        r.onload = function (e) { var i = document.getElementById(id); i.src = e.target.result; i.style.display = 'block'; };
-        r.readAsDataURL(f);
+    function pdfSec(t) { return '<h3 style="color:#00B900;border-bottom:1px solid #ddd;padding-bottom:4px;">■ ' + t + '</h3>'; }
+    function pdfTable(rows) {
+        return '<table style="width:100%;border-collapse:collapse;font-size:10pt;margin-bottom:14px;">' +
+            rows.map(function(r) { return '<tr><td style="padding:6px;background:#f5f5f5;width:40%;">' + r[0] + '</td><td style="padding:6px;font-weight:bold;">' + r[1] + '</td></tr>'; }).join('') +
+        '</table>';
     }
 
-    // ─── イベント登録 ────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', function () {
-        document.getElementById('btn-verify').addEventListener('click', verifyCode);
-        document.getElementById('btn-reset').addEventListener('click', resetDemoData);
-        document.getElementById('btn-kyc-cam').addEventListener('click', function () { document.getElementById('file-kyc').click(); });
-        document.getElementById('file-kyc').addEventListener('change', function () { handlePreview(this, 'preview-kyc'); });
-        document.getElementById('btn-go-map').addEventListener('click', function () { changeView('map-view'); });
-        document.getElementById('agree-btn-nav').addEventListener('click', function () { changeView('agree-view'); });
-        document.getElementById('btn-close-detail').addEventListener('click', closeDetail);
-        document.getElementById('btn-finalize').addEventListener('click', finalizeProcess);
-        document.getElementById('m-hand').addEventListener('click', function () { setSigMethod('hand'); });
-        document.getElementById('m-digital').addEventListener('click', function () { setSigMethod('digital'); });
-        document.getElementById('t-pen').addEventListener('click', function () { setTool('pen'); });
-        document.getElementById('t-eraser').addEventListener('click', function () { setTool('eraser'); });
+    /* ══════════════════════════════════════════
+       確定処理
+    ══════════════════════════════════════════ */
+    async function finalizeProcess() {
+        var sigData = getSignatureData();
+        if (!sigData) return;
+        showLoader();
+        updateStatus('🔒 署名を保存中...');
+        try {
+            var updates;
+            if (currentMode === 'boundary') {
+                if (isOwner) {
+                    updates = { sig_a_done: true, sig_a_data: sigData, owner_address: document.getElementById('current-address').value };
+                } else {
+                    updates = { sig_b_done: true, sig_b_data: sigData, adjacent_address: document.getElementById('current-address').value, is_agreed: true };
+                }
+            } else {
+                updates = { sig_a_done: true, sig_a_data: sigData };
+            }
+            var res = await db.from('forest_plots').update(updates).eq('id', targetData.id).select().single();
+            if (res.data) targetData = Object.assign({}, targetData, res.data);
+            hideLoader();
+
+            if (targetData.sig_a_done && targetData.sig_b_done) {
+                alert('両者の署名が完了しました。レポートよりPDFを発行できます。');
+                changeView('report-view');
+            } else {
+                alert('署名を保存しました。');
+                location.reload();
+            }
+        } catch(e) {
+            alert('保存に失敗しました: ' + e.message);
+            hideLoader();
+        }
+    }
+
+    /* ══════════════════════════════════════════
+       初期化（リセット）
+    ══════════════════════════════════════════ */
+    async function executeReset() {
+        var code = document.getElementById('reset-code').value.toUpperCase().trim();
+        var pwd  = document.getElementById('reset-pwd').value;
+
+        if (pwd !== ADMIN_PASSWORD) { alert('管理者パスワードが違います'); return; }
+        if (!code) { alert('招待コードを入力してください'); return; }
+
+        if (!confirm('「' + code + '」の合意データ・閲覧権限をすべてリセットします。\nこの操作は取り消せません。')) return;
+
+        showLoader();
+        updateStatus('🔄 初期化中...');
+        try {
+            var res = await db.from('forest_plots').update({
+                sig_a_done: false, sig_b_done: false,
+                sig_a_data: null,  sig_b_data: null,
+                is_agreed:  false,
+                owner_address: null, adjacent_address: null
+            }).eq('invitation_code', code);
+
+            hideLoader();
+            document.getElementById('reset-modal').style.display = 'none';
+            if (res.error) { alert('エラー: ' + res.error.message); return; }
+            alert('✅ 初期化が完了しました');
+        } catch(e) {
+            hideLoader();
+            alert('エラーが発生しました: ' + e.message);
+        }
+    }
+
+    /* ══════════════════════════════════════════
+       LIFF初期化
+    ══════════════════════════════════════════ */
+    function initLIFF() {
+        if (typeof liff === 'undefined') { console.warn('LIFF SDK not loaded'); return; }
+        liff.init({ liffId: '2009625158-euVZJmlu' })
+            .then(function() { if (!liff.isLoggedIn()) liff.login(); })
+            .catch(function(e) { console.error('LIFF Init Error', e); });
+    }
+
+    /* ══════════════════════════════════════════
+       イベント登録
+    ══════════════════════════════════════════ */
+    document.addEventListener('DOMContentLoaded', function() {
+        /* ホーム */
+        document.getElementById('btn-boundary').addEventListener('click', function() { selectMode('boundary'); });
+        document.getElementById('btn-timber').addEventListener('click',   function() { selectMode('timber'); });
+        document.getElementById('btn-view').addEventListener('click',     function() { selectMode('view'); });
+        document.getElementById('btn-show-reset').addEventListener('click', function() {
+            document.getElementById('reset-code').value = '';
+            document.getElementById('reset-pwd').value  = '';
+            document.getElementById('reset-modal').style.display = 'flex';
+        });
+        /* エントリー */
+        document.getElementById('entry-next-btn').addEventListener('click', verifyCode);
+        document.getElementById('btn-back').addEventListener('click', function() { location.reload(); });
+        /* KYC */
+        document.getElementById('btn-show-map').addEventListener('click', function() { changeView('map-view'); });
+        /* 地図 */
+        document.getElementById('btn-close-detail').addEventListener('click', function() { document.body.classList.remove('mode-split'); });
+        /* 立木 */
+        document.getElementById('btn-timber-agree').addEventListener('click', function() { changeView('agree-view'); });
+        /* 署名 */
+        document.getElementById('tab-handwrite').addEventListener('click', function() { switchSigMode('handwrite'); });
+        document.getElementById('tab-seal').addEventListener('click',      function() { switchSigMode('seal'); });
+        document.getElementById('tool-pen').addEventListener('click',    function() { setTool('pen'); });
+        document.getElementById('tool-eraser').addEventListener('click', function() { setTool('eraser'); });
+        document.getElementById('tab-seal-gen').addEventListener('click',    function() { switchSealMode('gen'); });
+        document.getElementById('tab-seal-upload').addEventListener('click', function() { switchSealMode('upload'); });
+        document.getElementById('btn-gen-seal').addEventListener('click', generateSeal);
+        document.getElementById('btn-select-seal').addEventListener('click', function() { document.getElementById('seal-upload-input').click(); });
+        document.getElementById('seal-upload-input').addEventListener('change', function() { onSealFileChange(this); });
+        document.getElementById('final-btn').addEventListener('click',    finalizeProcess);
         document.getElementById('btn-clear-sig').addEventListener('click', clearSig);
-        document.getElementById('reload-btn').addEventListener('click', function () { location.reload(); });
+        /* レポート */
+        document.getElementById('btn-back-report').addEventListener('click', function() { changeView('map-view'); });
+        document.getElementById('btn-generate-pdf').addEventListener('click', generatePDF);
+        /* 初期化 */
+        document.getElementById('btn-reset-exec').addEventListener('click',   executeReset);
+        document.getElementById('btn-reset-cancel').addEventListener('click', function() { document.getElementById('reset-modal').style.display = 'none'; });
+
         initLIFF();
     });
 
 })();
 </script>
-
-<!--
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Supabase Edge Function: line-push
-supabase/functions/line-push/index.ts として作成し、
-`supabase functions deploy line-push` でデプロイ
-
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-serve(async (req) => {
-  const { to, messages } = await req.json();
-  const res = await fetch("https://api.line.me/v2/bot/message/push", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      // Supabase ダッシュボード → Settings → Edge Functions → Secrets に
-      // LINE_CHANNEL_ACCESS_TOKEN を登録してください
-      "Authorization": `Bearer ${Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN")}`,
-    },
-    body: JSON.stringify({ to, messages }),
-  });
-  const body = await res.text();
-  return new Response(body, { status: res.status, headers: { "Content-Type": "application/json" } });
-});
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--->
 </body>
 </html>
