@@ -510,10 +510,10 @@
     function formatYen(n) { return '¥' + Math.round(n).toLocaleString('ja-JP'); }
 
     function getPhotos(data) {
-        var p = data.photos || data.photo_urls || data.photo_url || [];
-        if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { p = p ? [p] : []; } }
-        return Array.isArray(p) ? p : (p ? [p] : []);
-    }
+    var p = data.evidence_photo_url || data.photos || data.photo_urls || data.photo_url || [];
+    if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { p = p ? [p] : []; } }
+    return Array.isArray(p) ? p : (p ? [p] : []);
+}
 
     function getStatusBadge(data) {
         if (data.is_agreed || (data.sig_a_done && data.sig_b_done))
