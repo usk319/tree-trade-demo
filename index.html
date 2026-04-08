@@ -162,6 +162,12 @@
         }
         .share-code    { font-size: 22px; font-weight: bold; letter-spacing: 4px; color: var(--dgreen); margin: 6px 0; }
 
+        /* ── 入力ヒント ── */
+        .input-hint {
+            font-size: 11px; color: #aaa; text-align: center;
+            margin: -8px 0 10px; line-height: 1.5;
+        }
+
         /* ── 森林テーマローディング ── */
         #forest-loader {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -195,9 +201,7 @@
             font-size: 13px; color: #81c784; margin-top: 10px;
             font-family: monospace; z-index: 2; min-height: 20px; text-align: center;
         }
-        .progress-steps {
-            display: flex; gap: 6px; margin-top: 16px; z-index: 2;
-        }
+        .progress-steps { display: flex; gap: 6px; margin-top: 16px; z-index: 2; }
         .progress-dot {
             width: 8px; height: 8px; border-radius: 50%;
             background: rgba(165,214,167,0.3); transition: background 0.4s;
@@ -222,13 +226,9 @@
 </head>
 <body>
 
-<!-- ════════════════════════════════════════════
-     森林テーマ ローディングオーバーレイ
-════════════════════════════════════════════ -->
+<!-- ローディングオーバーレイ -->
 <div id="forest-loader">
-    <!-- 落ち葉パーティクル (JSで生成) -->
     <div id="leaf-container"></div>
-
     <div class="tree-wrap">
         <svg class="tree-svg" viewBox="0 0 100 140" width="90" height="126">
             <rect class="trunk" x="44" y="88" width="12" height="52" rx="4" fill="#5D4037"/>
@@ -238,7 +238,6 @@
             <polygon points="50,10 38,45 62,45" fill="rgba(255,255,255,0.07)"/>
         </svg>
     </div>
-
     <div class="orito-label">ORITO CORE</div>
     <div id="status-text">🌱 起動中...</div>
     <div class="progress-steps" id="progress-steps">
@@ -250,23 +249,19 @@
     </div>
 </div>
 
-<!-- ════════════════════════════════════════════
-     初期化モーダル
-════════════════════════════════════════════ -->
+<!-- 初期化モーダル -->
 <div id="reset-modal">
     <div class="reset-card">
         <h3 style="margin:0 0 6px;">🔄 データ初期化</h3>
         <p style="font-size:12px; color:#888; margin:0 0 20px;">署名・合意状況・閲覧権限をリセットします</p>
-        <input type="text"     id="reset-code" class="input-field" placeholder="招待コード（例：ADMIN001）">
+        <input type="text"     id="reset-code" class="input-field" placeholder="招待コード（例：TEST001）">
         <input type="password" id="reset-pwd"  class="input-field" placeholder="管理者パスワード">
         <button class="btn btn-primary" id="btn-reset-exec" style="background:var(--red);">初期化を実行</button>
         <button class="btn" style="background:#f1f2f6;" id="btn-reset-cancel">キャンセル</button>
     </div>
 </div>
 
-<!-- ════════════════════════════════════════════
-     ① ホーム画面
-════════════════════════════════════════════ -->
+<!-- ① ホーム画面 -->
 <div id="home-view" class="view active">
     <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:36px;">
         <div style="margin-bottom:8px; font-size:48px;">🌲</div>
@@ -276,13 +271,15 @@
         <div class="home-grid">
             <button class="home-btn home-btn-boundary" id="btn-boundary">
                 <span class="home-btn-icon">📍</span>境界確定合意
+                <div style="font-size:10px;margin-top:4px;opacity:0.8;">招待コード／パスワード</div>
             </button>
             <button class="home-btn home-btn-timber" id="btn-timber">
                 <span class="home-btn-icon">🌲</span>立木売買契約
+                <div style="font-size:10px;margin-top:4px;opacity:0.8;">招待コード／パスワード</div>
             </button>
             <button class="home-btn home-btn-view" id="btn-view" style="grid-column:span 2;">
                 <span class="home-btn-icon">👁️</span>森林レポート閲覧
-                <div style="font-size:10px; margin-top:4px; opacity:0.8;">所有者許可コード入力</div>
+                <div style="font-size:10px; margin-top:4px; opacity:0.8;">パスワードのみ（要・所有者許可）</div>
             </button>
         </div>
 
@@ -290,13 +287,22 @@
     </div>
 </div>
 
-<!-- ② 招待コード -->
+<!-- ② 招待コード・パスワード入力 -->
 <div id="entry-view" class="view">
     <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; overflow-y:auto;">
         <div id="entry-tag" style="display:inline-block; padding:4px 14px; border-radius:20px; font-size:11px; font-weight:bold; margin-bottom:10px; color:#fff;"></div>
         <h2 style="margin-bottom:8px;" id="entry-title">コードを入力</h2>
         <p id="entry-desc" style="font-size:13px; color:#888; margin-bottom:20px; text-align:center;"></p>
-        <input type="text" id="invite-input" class="input-field" style="text-align:center; font-size:26px; letter-spacing:5px;" placeholder="ADMIN001">
+
+        <input type="text" id="invite-input" class="input-field"
+            style="text-align:center; font-size:22px; letter-spacing:4px;"
+            placeholder="招待コード（2回目以降は不要）">
+        <p class="input-hint" id="code-hint">※ 初回のみ入力。2回目以降はパスワードのみでログインできます。</p>
+
+        <input type="password" id="password-input" class="input-field"
+            placeholder="パスワード（英数字・自由設定）">
+        <p class="input-hint">※ 初回ログイン時に設定したパスワードが次回以降に使用されます。</p>
+
         <button class="btn btn-primary" id="entry-next-btn">照会する</button>
         <button class="btn" style="background:#f1f2f6; margin-top:14px;" id="btn-back">← 戻る</button>
     </div>
@@ -326,7 +332,6 @@
         </div>
         <div style="padding:0 18px 18px;" id="detail-actions">
             <div id="photo-list" class="photo-grid"></div>
-            <!-- アクセスレベルにより動的表示 -->
         </div>
     </div>
 </div>
@@ -339,7 +344,7 @@
             <p><strong>対象地番：</strong><span id="t-parcel"></span></p>
             <p><strong>面積：</strong><span id="t-area"></span> ha</p>
         </div>
-        <input type="number" id="trade-price"    class="input-field" placeholder="売買代金を入力">
+        <input type="number" id="trade-price"      class="input-field" placeholder="売買代金を入力">
         <input type="date"   id="logging-deadline" class="input-field">
         <button class="btn btn-web3" id="btn-timber-agree">契約署名へ</button>
     </div>
@@ -406,9 +411,6 @@
 <!-- PDF テンプレート -->
 <div id="pdf-overlay"><div id="pdf-template"></div></div>
 
-<!-- ════════════════════════════════════════════
-     JavaScript
-════════════════════════════════════════════ -->
 <script>
 (function () {
     'use strict';
@@ -419,20 +421,20 @@
     var db = window.supabase.createClient(S_URL, S_KEY);
 
     /* ─── 管理者設定 ─── */
-    var ADMIN_PASSWORD = 'ORITO2026';          // ※本番環境では変更してください
-    var VIEW_SUFFIX    = '-V';                 // 閲覧コードのサフィックス
+    var ADMIN_PASSWORD = 'ORITO2026';
+    var VIEW_SUFFIX    = '-V';
 
     /* ─── アクセスレベル ─── */
-    var ACCESS_NONE        = 0; // アクセス不可
-    var ACCESS_VIEWER      = 1; // 閲覧のみ（所有者が許可）
-    var ACCESS_PARTICIPANT = 2; // 署名者（乙）
-    var ACCESS_OWNER       = 3; // 所有者（甲）全権
+    var ACCESS_NONE        = 0;
+    var ACCESS_VIEWER      = 1;
+    var ACCESS_PARTICIPANT = 2;
+    var ACCESS_OWNER       = 3;
 
     /* ─── 状態変数 ─── */
     var targetData      = null;
     var mapInstance     = null;
     var sigCtx          = null;
-    var currentMode     = 'boundary'; // 'boundary' | 'timber' | 'view'
+    var currentMode     = 'boundary';
     var isOwner         = true;
     var accessLevel     = ACCESS_PARTICIPANT;
     var currentTool     = 'pen';
@@ -510,10 +512,10 @@
     function formatYen(n) { return '¥' + Math.round(n).toLocaleString('ja-JP'); }
 
     function getPhotos(data) {
-    var p = data.evidence_photo_url || data.photos || data.photo_urls || data.photo_url || [];
-    if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { p = p ? [p] : []; } }
-    return Array.isArray(p) ? p : (p ? [p] : []);
-}
+        var p = data.evidence_photo_url || data.photos || data.photo_urls || data.photo_url || [];
+        if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { p = p ? [p] : []; } }
+        return Array.isArray(p) ? p : (p ? [p] : []);
+    }
 
     function getStatusBadge(data) {
         if (data.is_agreed || (data.sig_a_done && data.sig_b_done))
@@ -553,73 +555,153 @@
     ══════════════════════════════════════════ */
     function selectMode(mode) {
         currentMode = mode;
-        var tag  = document.getElementById('entry-tag');
+        var tag   = document.getElementById('entry-tag');
         var title = document.getElementById('entry-title');
         var desc  = document.getElementById('entry-desc');
+        var hint  = document.getElementById('code-hint');
+        var codeInput = document.getElementById('invite-input');
 
         if (mode === 'boundary') {
             tag.innerText = '境界確定モード';
             tag.style.background = 'var(--green)';
-            title.innerText = '招待コードを入力';
-            desc.innerText  = '甲（所有者）または乙（隣接所有者）として参加します';
+            title.innerText = '招待コード／パスワードを入力';
+            desc.innerText  = '初回は招待コード＋パスワード設定。2回目以降はパスワードのみ。';
+            codeInput.placeholder = '招待コード（2回目以降は不要）';
+            hint.style.display = 'block';
         } else if (mode === 'timber') {
             tag.innerText = '立木取引モード';
             tag.style.background = 'var(--web3)';
-            title.innerText = '招待コードを入力';
-            desc.innerText  = '立木売買の当事者として参加します';
+            title.innerText = '招待コード／パスワードを入力';
+            desc.innerText  = '初回は招待コード＋パスワード設定。2回目以降はパスワードのみ。';
+            codeInput.placeholder = '招待コード（2回目以降は不要）';
+            hint.style.display = 'block';
         } else if (mode === 'view') {
             tag.innerText = '閲覧モード';
             tag.style.background = '#1565C0';
-            title.innerText = '閲覧コードを入力';
-            desc.innerText  = '所有者から共有された閲覧コード（末尾が "-V"）を入力してください';
+            title.innerText = 'パスワードを入力';
+            desc.innerText  = '所有者から許可を受けた後、パスワードのみでログインできます。初回は閲覧コード（末尾 "-V"）も入力してください。';
+            codeInput.placeholder = '閲覧コード（初回のみ・末尾 -V）';
+            hint.style.display = 'block';
         }
         changeView('entry-view');
     }
 
     /* ══════════════════════════════════════════
-       招待コード照会
+       招待コード・パスワード照会
     ══════════════════════════════════════════ */
     async function verifyCode() {
         var raw  = document.getElementById('invite-input').value.toUpperCase().trim();
+        var pwd  = document.getElementById('password-input').value;
         var isViewCode = raw.endsWith(VIEW_SUFFIX);
         var code = isViewCode ? raw.slice(0, -VIEW_SUFFIX.length) : raw;
 
+        if (!pwd) { alert('パスワードを入力してください'); return; }
+
         showLoader();
         try {
-            /* 甲コード(invitation_code) を先に照合 */
-            var res = await db.from('forest_plots')
-                .select('*')
-                .eq('invitation_code', code)
-                .maybeSingle();
+            var res = { data: null, error: null };
 
-            /* 見つからなければ 乙コード(adjacent_code) で照合 */
-            if (!res.data && !res.error) {
-                res = await db.from('forest_plots')
-                    .select('*')
-                    .eq('adjacent_code', code)
-                    .maybeSingle();
-            }
+            if (currentMode === 'view' || isViewCode) {
+                /* ── 閲覧者ルート ── */
+                if (code) {
+                    /* 初回：閲覧コードで照合 */
+                    res = await db.from('forest_plots')
+                        .select('*').eq('invitation_code', code).maybeSingle();
+                } else {
+                    /* 2回目以降：パスワードのみで照合 */
+                    res = await db.from('forest_plots')
+                        .select('*').eq('password_v', pwd).eq('viewer_allowed', true).maybeSingle();
+                }
 
-            if (res.error || !res.data) {
-                hideLoader();
-                var errDetail = res.error ? '\n[詳細: ' + res.error.message + ']' : '';
-                alert('無効なコードです。\n・甲（所有者）コード：招待コードをそのまま入力\n・乙（隣接者）コード：管理者から発行された乙用コード\n・閲覧コード：招待コード末尾に "-V" を付加' + errDetail);
-                return;
-            }
-            targetData = res.data;
+                if (res.error || !res.data) {
+                    hideLoader();
+                    alert('コードまたはパスワードが正しくありません。');
+                    return;
+                }
+                targetData = res.data;
 
-            /* アクセスレベル判定 — どちらのコードで一致したかで役割を決める */
-            if (isViewCode || currentMode === 'view') {
+                if (!targetData.viewer_allowed) {
+                    hideLoader();
+                    alert('閲覧許可がまだ与えられていません。\n所有者に許可を依頼してください。');
+                    return;
+                }
+
+                if (!targetData.password_v) {
+                    /* 初回：パスワードを保存 */
+                    await db.from('forest_plots').update({ password_v: pwd }).eq('id', targetData.id);
+                    targetData.password_v = pwd;
+                } else if (targetData.password_v !== pwd) {
+                    hideLoader();
+                    alert('パスワードが違います。');
+                    return;
+                }
+
                 accessLevel = ACCESS_VIEWER;
                 isOwner     = false;
-            } else if (targetData.invitation_code === code) {
-                /* 甲（所有者）コードで一致 */
-                accessLevel = ACCESS_OWNER;
-                isOwner     = true;
+
             } else {
-                /* 乙（隣接者）コードで一致 */
-                accessLevel = ACCESS_PARTICIPANT;
-                isOwner     = false;
+                /* ── 甲・乙ルート ── */
+                if (code) {
+                    /* 初回：招待コードで照合 */
+                    res = await db.from('forest_plots')
+                        .select('*').eq('invitation_code', code).maybeSingle();
+                    if (!res.data && !res.error) {
+                        res = await db.from('forest_plots')
+                            .select('*').eq('adjacent_code', code).maybeSingle();
+                    }
+                } else {
+                    /* 2回目以降：パスワードのみで照合（甲→乙の順） */
+                    res = await db.from('forest_plots')
+                        .select('*').eq('password_a', pwd).maybeSingle();
+                    if (!res.data && !res.error) {
+                        res = await db.from('forest_plots')
+                            .select('*').eq('password_b', pwd).maybeSingle();
+                    }
+                }
+
+                if (res.error || !res.data) {
+                    hideLoader();
+                    alert('コードまたはパスワードが正しくありません。');
+                    return;
+                }
+                targetData = res.data;
+
+                var isOwnerCode = code && targetData.invitation_code === code;
+                var isAdjCode   = code && targetData.adjacent_code   === code;
+                var isPwdA      = !code && targetData.password_a === pwd;
+                var isPwdB      = !code && targetData.password_b === pwd;
+
+                if (isOwnerCode || isPwdA) {
+                    /* 甲 */
+                    if (isOwnerCode && !targetData.password_a) {
+                        /* 初回：パスワード設定 */
+                        await db.from('forest_plots').update({ password_a: pwd }).eq('id', targetData.id);
+                        targetData.password_a = pwd;
+                    } else if (targetData.password_a && targetData.password_a !== pwd) {
+                        hideLoader();
+                        alert('パスワードが違います。');
+                        return;
+                    }
+                    accessLevel = ACCESS_OWNER;
+                    isOwner     = true;
+                } else if (isAdjCode || isPwdB) {
+                    /* 乙 */
+                    if (isAdjCode && !targetData.password_b) {
+                        /* 初回：パスワード設定 */
+                        await db.from('forest_plots').update({ password_b: pwd }).eq('id', targetData.id);
+                        targetData.password_b = pwd;
+                    } else if (targetData.password_b && targetData.password_b !== pwd) {
+                        hideLoader();
+                        alert('パスワードが違います。');
+                        return;
+                    }
+                    accessLevel = ACCESS_PARTICIPANT;
+                    isOwner     = false;
+                } else {
+                    hideLoader();
+                    alert('コードまたはパスワードが正しくありません。');
+                    return;
+                }
             }
 
             hideLoader();
@@ -637,15 +719,19 @@
                     isOwner ? '役割：土地所有者（甲）' : '役割：隣接所有者（乙）';
                 changeView('kyc-view');
             }
+
         } catch(e) {
             hideLoader();
             alert('エラーが発生しました: ' + e.message);
         }
     }
 
+    /* ══════════════════════════════════════════
+       詳細パネル
+    ══════════════════════════════════════════ */
     function showDetailPanel() {
-        document.getElementById('parcel-title').innerText       = targetData.parcel_number;
-        document.getElementById('parcel-info').innerText        = '面積：' + targetData.area_ha + ' ha';
+        document.getElementById('parcel-title').innerText        = targetData.parcel_number;
+        document.getElementById('parcel-info').innerText         = '面積：' + targetData.area_ha + ' ha';
         document.getElementById('parcel-status-badge').innerHTML = getStatusBadge(targetData);
         loadPhotos(targetData);
         renderDetailActions();
@@ -671,14 +757,11 @@
                     '</div>';
         }
 
-        // 既存ボタンのイベントを消してから差し替え
-        var old = el.querySelector('#btn-to-report');
-        if (old) old.remove();
+        var old  = el.querySelector('#btn-to-report');
         var old2 = el.querySelector('#btn-to-agree');
+        if (old)  old.remove();
         if (old2) old2.remove();
 
-        // photo-listの後に追加
-        var photoList = el.querySelector('#photo-list');
         var wrapper = document.createElement('div');
         wrapper.innerHTML = html;
         el.appendChild(wrapper);
@@ -716,11 +799,16 @@
     ══════════════════════════════════════════ */
     function initMap() {
         if (mapInstance) return;
+
+        var tileUrl = (targetData && targetData.ortho_tile_url)
+            ? targetData.ortho_tile_url
+            : 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg';
+
         mapInstance = new maplibregl.Map({
             container: 'map',
             style: {
                 version: 8,
-                sources: { gsi: { type: 'raster', tiles: ['https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg'], tileSize: 256 } },
+                sources: { gsi: { type: 'raster', tiles: [tileUrl], tileSize: 256 } },
                 layers:  [{ id: 'gsi', type: 'raster', source: 'gsi' }]
             },
             center: [131.39, 31.99], zoom: 16, preserveDrawingBuffer: true
@@ -736,14 +824,13 @@
 
             mapInstance.addSource('plot-src', { type: 'geojson', data: { type: 'FeatureCollection', features: filtered } });
 
-            /* ステータスで色分け */
             mapInstance.addLayer({
                 id: 'fill', type: 'fill', source: 'plot-src',
                 paint: {
                     'fill-opacity': 0.55,
                     'fill-color': [
                         'case',
-                        ['boolean', ['get', 'is_agreed'],   false], '#00B900',
+                        ['boolean', ['get', 'is_agreed'],  false], '#00B900',
                         ['boolean', ['get', 'sig_a_done'], false], '#FFA502',
                         '#FF4757'
                     ]
@@ -883,6 +970,25 @@
     }
 
     /* ══════════════════════════════════════════
+       閲覧者許可トグル（甲専用）
+    ══════════════════════════════════════════ */
+    async function toggleViewerAccess(allow) {
+        showLoader();
+        try {
+            var res = await db.from('forest_plots')
+                .update({ viewer_allowed: allow })
+                .eq('id', targetData.id).select().single();
+            if (res.data) targetData = Object.assign({}, targetData, res.data);
+            hideLoader();
+            alert(allow ? '✅ 閲覧を許可しました' : '🔒 閲覧許可を取り消しました');
+            populateReport();
+        } catch(e) {
+            hideLoader();
+            alert('エラーが発生しました: ' + e.message);
+        }
+    }
+
+    /* ══════════════════════════════════════════
        AI資産価値予測
     ══════════════════════════════════════════ */
     function generateAIPrediction(area_ha) {
@@ -916,11 +1022,18 @@
         var sigStatus = (d.is_agreed || (d.sig_a_done && d.sig_b_done))
             ? '✅ 両者合意済み' : d.sig_a_done ? '🟡 甲のみ署名済み' : '🔴 未署名';
 
-        // コード一覧表示（所有者のみ）
+        /* コード管理＋閲覧者許可（所有者のみ） */
         var shareCodeHtml = '';
         if (isOwnerAccess()) {
-            var viewCode     = d.invitation_code + VIEW_SUFFIX;
-            var adjCode      = d.adjacent_code || '（未設定）';
+            var viewCode  = d.invitation_code + VIEW_SUFFIX;
+            var adjCode   = d.adjacent_code || '（未設定）';
+            var viewerStatus = d.viewer_allowed
+                ? '<span style="color:var(--green);font-weight:bold;">✅ 許可済み</span>'
+                : '<span style="color:var(--red);font-weight:bold;">🔒 未許可</span>';
+            var toggleBtn = d.viewer_allowed
+                ? '<button onclick="toggleViewerAccess(false)" class="btn btn-sm" style="background:var(--red);color:#fff;margin-top:8px;width:100%;">許可を取り消す</button>'
+                : '<button onclick="toggleViewerAccess(true)"  class="btn btn-sm btn-primary" style="margin-top:8px;width:100%;">閲覧を許可する</button>';
+
             shareCodeHtml =
                 '<div class="report-section">' +
                 '<div class="report-title">🔑 コード管理（所有者専用）</div>' +
@@ -928,12 +1041,17 @@
                     '<div style="font-size:11px; color:#666; margin-bottom:10px;">各コードを相手に共有してください</div>' +
                     codeRow('👑 甲（所有者）コード', d.invitation_code) +
                     codeRow('✏️ 乙（隣接者）コード', adjCode) +
-                    codeRow('👁️ 閲覧専用コード',     viewCode) +
+                    codeRow('👁️ 閲覧専用コード（初回）', viewCode) +
+                    '<div style="margin-top:14px;padding:12px;background:#f8f9fa;border-radius:10px;">' +
+                        '<div style="font-size:12px;color:#666;margin-bottom:6px;">👁️ 閲覧者アクセス：' + viewerStatus + '</div>' +
+                        '<div style="font-size:11px;color:#aaa;margin-bottom:6px;">許可後、閲覧者は独自パスワードを設定してログインできます</div>' +
+                        toggleBtn +
+                    '</div>' +
                 '</div>' +
                 '</div>';
         }
 
-        // アクセス制限チェック
+        /* アクセス制限チェック */
         if (!canSeeReport()) {
             document.getElementById('report-content').innerHTML =
                 '<div style="padding:30px; text-align:center;">' +
@@ -941,7 +1059,7 @@
                     '<div class="access-denied-icon">🔒</div>' +
                     '<div style="font-weight:bold; font-size:16px; margin-bottom:8px;">閲覧制限</div>' +
                     '<div style="font-size:13px; opacity:0.85;">このレポートは所有者が許可した方のみ<br>閲覧できます。</div>' +
-                    '<div style="font-size:11px; opacity:0.6; margin-top:12px;">閲覧コード（末尾 "-V"）をお持ちの方は<br>ホーム画面「森林レポート閲覧」からご入力ください。</div>' +
+                    '<div style="font-size:11px; opacity:0.6; margin-top:12px;">所有者に閲覧許可を依頼してください。</div>' +
                 '</div>' +
                 '</div>';
             document.getElementById('btn-generate-pdf').disabled = true;
@@ -984,8 +1102,8 @@
             );
 
         var canPDF = !!(d.is_agreed || (d.sig_a_done && d.sig_b_done));
-        document.getElementById('btn-generate-pdf').disabled   = !canPDF;
-        document.getElementById('pdf-status-msg').innerText    = canPDF ? 'PDF発行が可能です' : '2名の署名が完了するとPDFを発行できます';
+        document.getElementById('btn-generate-pdf').disabled = !canPDF;
+        document.getElementById('pdf-status-msg').innerText  = canPDF ? 'PDF発行が可能です' : '2名の署名が完了するとPDFを発行できます';
     }
 
     function codeRow(label, code) {
@@ -1065,7 +1183,6 @@
 
         var pdfFileName = 'pdf/orito_' + (d.parcel_number || 'report').replace(/\s/g,'_') + '_' + Date.now() + '.pdf';
         try {
-            /* ── Step1: PDF を Blob として生成 ── */
             updateStatus('📄 PDF生成中...');
             var pdfBlob = await html2pdf().from(document.getElementById('pdf-template')).set({
                 margin: 0,
@@ -1075,7 +1192,6 @@
                 jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
             }).output('blob');
 
-            /* ── Step2: Supabase Storage にアップロード ── */
             updateStatus('☁️ ストレージへアップロード中...');
             var uploadRes = await db.storage
                 .from('orito-pdfs')
@@ -1083,14 +1199,12 @@
 
             if (uploadRes.error) throw new Error('Upload: ' + uploadRes.error.message);
 
-            /* ── Step3: 公開URLを取得して開く ── */
             var urlRes = db.storage.from('orito-pdfs').getPublicUrl(pdfFileName);
             var pdfUrl = urlRes.data.publicUrl;
 
             updateStatus('✅ PDF発行完了！');
             hideLoader();
 
-            /* LINE LIFF 内では外部ブラウザで開く、それ以外は新規タブ */
             if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
                 liff.openWindow({ url: pdfUrl, external: true });
             } else {
@@ -1100,7 +1214,6 @@
 
         } catch(e) {
             hideLoader();
-            /* ── フォールバック: 直接ダウンロード ── */
             try {
                 await html2pdf().from(document.getElementById('pdf-template')).set({
                     margin: 0,
@@ -1169,7 +1282,7 @@
         if (pwd !== ADMIN_PASSWORD) { alert('管理者パスワードが違います'); return; }
         if (!code) { alert('招待コードを入力してください'); return; }
 
-        if (!confirm('「' + code + '」の合意データ・閲覧権限をすべてリセットします。\nこの操作は取り消せません。')) return;
+        if (!confirm('「' + code + '」の合意データ・パスワード・閲覧権限をすべてリセットします。\nこの操作は取り消せません。')) return;
 
         showLoader();
         updateStatus('🔄 初期化中...');
@@ -1178,7 +1291,9 @@
                 sig_a_done: false, sig_b_done: false,
                 sig_a_data: null,  sig_b_data: null,
                 is_agreed:  false,
-                owner_address: null, adjacent_address: null
+                owner_address: null, adjacent_address: null,
+                password_a: null, password_b: null, password_v: null,
+                viewer_allowed: false
             }).eq('invitation_code', code);
 
             hideLoader();
@@ -1205,7 +1320,6 @@
        イベント登録
     ══════════════════════════════════════════ */
     document.addEventListener('DOMContentLoaded', function() {
-        /* ホーム */
         document.getElementById('btn-boundary').addEventListener('click', function() { selectMode('boundary'); });
         document.getElementById('btn-timber').addEventListener('click',   function() { selectMode('timber'); });
         document.getElementById('btn-view').addEventListener('click',     function() { selectMode('view'); });
@@ -1214,16 +1328,11 @@
             document.getElementById('reset-pwd').value  = '';
             document.getElementById('reset-modal').style.display = 'flex';
         });
-        /* エントリー */
         document.getElementById('entry-next-btn').addEventListener('click', verifyCode);
         document.getElementById('btn-back').addEventListener('click', function() { location.reload(); });
-        /* KYC */
         document.getElementById('btn-show-map').addEventListener('click', function() { changeView('map-view'); });
-        /* 地図 */
         document.getElementById('btn-close-detail').addEventListener('click', function() { document.body.classList.remove('mode-split'); });
-        /* 立木 */
         document.getElementById('btn-timber-agree').addEventListener('click', function() { changeView('agree-view'); });
-        /* 署名 */
         document.getElementById('tab-handwrite').addEventListener('click', function() { switchSigMode('handwrite'); });
         document.getElementById('tab-seal').addEventListener('click',      function() { switchSigMode('seal'); });
         document.getElementById('tool-pen').addEventListener('click',    function() { setTool('pen'); });
@@ -1235,10 +1344,8 @@
         document.getElementById('seal-upload-input').addEventListener('change', function() { onSealFileChange(this); });
         document.getElementById('final-btn').addEventListener('click',    finalizeProcess);
         document.getElementById('btn-clear-sig').addEventListener('click', clearSig);
-        /* レポート */
         document.getElementById('btn-back-report').addEventListener('click', function() { changeView('map-view'); });
         document.getElementById('btn-generate-pdf').addEventListener('click', generatePDF);
-        /* 初期化 */
         document.getElementById('btn-reset-exec').addEventListener('click',   executeReset);
         document.getElementById('btn-reset-cancel').addEventListener('click', function() { document.getElementById('reset-modal').style.display = 'none'; });
 
