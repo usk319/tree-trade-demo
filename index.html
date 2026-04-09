@@ -972,7 +972,7 @@
     /* ══════════════════════════════════════════
        閲覧者許可トグル（甲専用）
     ══════════════════════════════════════════ */
-    async function toggleViewerAccess(allow) {
+    window.toggleViewerAccess = async function(allow) {
         showLoader();
         try {
             var res = await db.from('forest_plots')
